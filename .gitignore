@@ -1,0 +1,41 @@
+
+# IDE
+.idea/
+.vscode/
+
+# Environnements virtuels Python
+.venv/
+venv/
+env/
+
+# Cache Python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Fichiers de configuration sensibles
+.env
+.env.*
+!.env.example
+
+# Bases de données locales
+*.sqlite3
+
+# Django
+staticfiles/
+media/
+
+# Couverture des tests
+.coverage
+.coverage.*
+htmlcov/
+coverage.xml
+
+# Logs
+*.log
+
+# Fichiers système
+.DS_Store
+Thumbs.db
