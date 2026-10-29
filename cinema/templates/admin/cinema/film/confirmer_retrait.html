@@ -1,0 +1,26 @@
+{% extends "admin/base_site.html" %}
+{% load i18n admin_urls %}
+
+{% block content %}
+    <p>Confirmez-vous le retrait des films suivants de la programmation ?</p>
+    <ul>
+        {% for film in films %}
+            <li>{{ film.titre }}</li>
+        {% endfor %}
+    </ul>
+    <p>Ils seront désactivés. Les films, les séances et les réservations seront conservés.</p>
+
+    <form method="post">
+        {% csrf_token %}
+        {% for film in films %}
+            <input type="hidden" name="{{ action_checkbox_name }}" value="{{ film.pk }}">
+        {% endfor %}
+        <input type="hidden" name="action" value="retirer_de_la_programmation">
+        <input type="hidden" name="select_across" value="{{ select_across }}">
+        <input type="hidden" name="confirmer" value="oui">
+        <div class="submit-row">
+            <input type="submit" value="Confirmer le retrait">
+            <a href="{% url opts|admin_urlname:'changelist' %}">Annuler</a>
+        </div>
+    </form>
+{% endblock %}
