@@ -2,7 +2,12 @@ from django.contrib import admin
 from django.contrib.admin.helpers import ACTION_CHECKBOX_NAME
 from django.template.response import TemplateResponse
 
-from .models import Film
+from django.db.models import Q
+from django.utils import timezone
+
+from .forms import SeanceAdminForm
+from .models import Film, Reservation, ReservationPlace, Seance
+from .services import enregistrer_seance
 
 
 @admin.register(Film)
@@ -37,3 +42,33 @@ class FilmAdmin(admin.ModelAdmin):
             "admin/cinema/film/confirmer_retrait.html",
             contexte,
         )
+
+
+@admin.register(Seance)
+class SeanceAdmin(admin.ModelAdmin):
+    form = SeanceAdminForm
+    list_display = ("film", "salle", "debut", "fin", "prix", "statut", "places_disponibles")
+    list_filter = ("salle", "statut", "debut")
+    list_select_related = ("film", "salle")
+    search_fields = ("film__titre", "salle__nom")
+    fields = ("film", "salle", "debut", "prix", "fin", "statut", "places_disponibles")
+    readonly_fields = ("fin", "statut", "places_disponibles")
+    actions = None
+
+    @admin.display(description="Places disponibles")
+    def places_disponibles(self, obj):
+        if not obj or not obj.pk:
+            return "Selon les places actives de la salle sélectionnée."
+        occupees = ReservationPlace.objects.filter(
+            reservation__seance=obj,
+        ).filter(
+            Q(reservation__statut=Reservation.Statut.CONFIRMEE)
+            | Q(
+                reservation__statut=Reservation.Statut.EN_ATTENTE,
+                reservation__date_expiration__gt=timezone.now(),
+            )
+        ).values("place_id")
+        return obj.salle.places.filter(active=True).exclude(pk__in=occupees).count()
+
+    def save_model(self, request, obj, form, change):
+        enregistrer_seance(obj)
