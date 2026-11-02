@@ -1,22 +1,60 @@
 {% extends "cinema/base.html" %}
 {% load static %}
 
-{% block title %}Films à l'affiche — Le Grand Cinéma{% endblock %}
+{% block title %}Séances du {{ jour_selectionne|date:"d/m/Y" }} — Le Grand Cinéma{% endblock %}
 
 {% block content %}
     {% get_media_prefix as media_prefix %}
-    <header class="mb-10 max-w-2xl">
-        <p class="mb-3 text-sm font-semibold tracking-widest text-red-700 uppercase">La programmation</p>
-        <h1 class="text-3xl font-bold tracking-tight wrap-anywhere sm:text-5xl">Films à l'affiche</h1>
-        <p class="mt-5 text-base leading-relaxed text-zinc-600 sm:text-lg">Découvrez les films de notre programmation à venir.</p>
-    </header>
+    <nav class="mb-10" aria-label="Choisir le jour de votre séance">
+        <ul class="flex gap-2 overflow-x-auto pb-3 md:gap-3">
+            {% for jour in jours %}
+                <li class="min-w-20 flex-1">
+                    <a href="?date={{ jour|date:'Y-m-d' }}"
+                       aria-label="{{ jour|date:'l d F Y' }}"
+                       {% if jour == jour_selectionne %}aria-current="date"{% endif %}
+                       class="flex min-h-24 flex-col items-center justify-center gap-1 rounded-lg border px-3 py-3 text-center focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-red-700 {% if jour == jour_selectionne %}border-yellow-400 bg-yellow-400 text-zinc-950{% else %}border-zinc-200 bg-white text-zinc-700 hover:border-red-700 hover:bg-red-50{% endif %}">
+                        <span class="text-xs font-medium capitalize">{{ jour|date:"D" }}</span>
+                        <span class="text-xl font-bold">{{ jour|date:"d" }}</span>
+                        <span class="text-xs">{% if jour == aujourd_hui %}Aujourd'hui{% else %}{{ jour|date:"M" }}{% endif %}</span>
+                    </a>
+                </li>
+            {% endfor %}
+                <li class="min-w-20 flex-1">
+                    <a href="?date={{ jour_selectionne|date:'Y-m-d' }}&amp;calendrier=1#choisir-date"
+                       {% if date_personnalisee %}aria-current="date"{% endif %}
+                       class="flex min-h-24 flex-col items-center justify-center gap-1 rounded-lg border px-3 py-3 text-center focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-red-700 {% if date_personnalisee %}border-yellow-400 bg-yellow-400 text-zinc-950{% else %}border-zinc-200 bg-white text-zinc-700 hover:border-red-700 hover:bg-red-50{% endif %}">
+                        <span class="text-lg font-semibold">Date</span>
+                        <span class="text-xs">{% if date_personnalisee %}{{ jour_selectionne|date:"d/m" }}{% else %}Au choix{% endif %}</span>
+                    </a>
+                </li>
+        </ul>
+        {% if afficher_calendrier %}
+            <form id="choisir-date" method="get" action="{% url 'cinema:films' %}" class="mt-4 flex flex-wrap items-end gap-4 rounded-lg border border-zinc-200 bg-zinc-50 p-4">
+                <div>
+                    <label for="date-seance" class="mb-2 block text-sm font-semibold">Choisir une date</label>
+                    <input id="date-seance" name="date" type="date" required
+                           min="{{ aujourd_hui|date:'Y-m-d' }}" max="9999-12-30"
+                           value="{{ jour_selectionne|date:'Y-m-d' }}"
+                           class="min-h-11 max-w-full rounded-md border border-zinc-300 bg-white px-3 py-2 text-zinc-900 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-red-700">
+                </div>
+                <input type="hidden" name="calendrier" value="1">
+                <button type="submit" class="min-h-11 rounded-md bg-yellow-400 px-5 py-3 text-sm font-semibold text-zinc-950 hover:bg-yellow-300 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-red-700">Afficher les séances</button>
+            </form>
+        {% endif %}
+    </nav>
 
-    <section id="films" class="scroll-mt-6" aria-label="Programmation des films">
+    <section id="films" class="scroll-mt-6" aria-labelledby="programmation-titre">
+        <header class="mb-8">
+            <p class="mb-2 text-sm font-semibold tracking-widest text-red-700 uppercase">La programmation</p>
+            <h1 id="programmation-titre" class="text-2xl font-bold tracking-tight wrap-anywhere sm:text-4xl">
+                Les séances du {{ jour_selectionne|date:"l d F" }}
+            </h1>
+        </header>
         {% if films %}
-            <ul class="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
+            <ul class="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
                 {% for film in films %}
                     <li class="min-w-0">
-                        <article class="flex h-full flex-col rounded-lg border border-zinc-200 border-t-4 border-t-red-700 bg-white p-6" aria-labelledby="film-{{ film.pk }}">
+                        <article class="flex h-full flex-col rounded-lg border border-zinc-200 border-t-4 border-t-red-700 bg-white p-5" aria-labelledby="film-{{ film.pk }}">
                             {% if film.affiche %}
                                 <img src="{{ media_prefix }}{{ film.affiche|urlencode }}"
                                      alt="Affiche du film {{ film.titre }}"
@@ -27,40 +65,24 @@
                                     Affiche non disponible
                                 </div>
                             {% endif %}
-                            <span class="mb-5 self-start rounded-full bg-red-50 px-3 py-1 text-xs font-semibold text-red-800">À l'affiche</span>
                             <h2 id="film-{{ film.pk }}" class="text-xl leading-snug font-bold wrap-anywhere">{{ film.titre }}</h2>
-                            <dl class="mt-6 mb-6 flex flex-wrap gap-x-8 gap-y-4 text-sm">
-                                <div>
-                                    <dt class="text-zinc-500">Durée</dt>
-                                    <dd class="mt-1 font-semibold">{{ film.duree }} min</dd>
-                                </div>
-                                {% if film.date_sortie %}
-                                    <div>
-                                        <dt class="text-zinc-500">Sortie</dt>
-                                        <dd class="mt-1 font-semibold"><time datetime="{{ film.date_sortie|date:'Y-m-d' }}">{{ film.date_sortie|date:"d/m/Y" }}</time></dd>
-                                    </div>
-                                {% endif %}
-                            </dl>
-                            {% if film.description %}
-                                <details class="group mt-auto border-t border-zinc-100 pt-5">
-                                    <summary class="w-fit cursor-pointer rounded-md bg-yellow-400 px-4 py-3 text-sm font-semibold text-zinc-950 hover:bg-yellow-300 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-zinc-900">
-                                        Lire le synopsis<span class="sr-only"> de {{ film.titre }}</span>
-                                    </summary>
-                                    <p class="mt-5 text-sm leading-relaxed wrap-anywhere text-zinc-600">{{ film.description|linebreaksbr }}</p>
-                                </details>
-                            {% else %}
-                                <p class="mt-auto border-t border-zinc-100 pt-5 text-sm text-zinc-500 italic">Synopsis non renseigné.</p>
-                            {% endif %}
+                            <p class="mt-2 mb-5 text-sm text-zinc-600"><span class="sr-only">Durée : </span>{{ film.duree }} min</p>
+                            <ul class="mt-auto flex flex-wrap gap-2 border-t border-zinc-100 pt-4" aria-label="Horaires de {{ film.titre }}">
+                                {% for seance in film.seances_du_jour %}
+                                    <li>
+                                        <time datetime="{{ seance.debut|date:'c' }}" class="inline-block rounded-md bg-yellow-100 px-3 py-2 text-sm font-semibold text-zinc-950">{{ seance.debut|date:"H:i" }}</time>
+                                    </li>
+                                {% endfor %}
+                            </ul>
                         </article>
                     </li>
                 {% endfor %}
             </ul>
         {% else %}
-            <section class="rounded-lg border border-zinc-200 border-t-4 border-t-red-700 bg-zinc-50 px-6 py-12 text-center sm:py-16" aria-labelledby="programmation-vide">
-                <h2 id="programmation-vide" class="text-xl font-bold sm:text-2xl">La programmation se prépare</h2>
-                <p class="mt-4 text-zinc-700">Aucun film n'est programmé pour le moment.</p>
-                <p class="mt-2 text-sm text-zinc-600">Revenez prochainement découvrir nos prochaines séances.</p>
-            </section>
+            <div class="rounded-lg border border-zinc-200 border-t-4 border-t-red-700 bg-zinc-50 px-6 py-12 text-center">
+                <p class="text-lg font-semibold">Aucune séance disponible pour cette journée.</p>
+                <p class="mt-2 text-sm text-zinc-600">Sélectionnez un autre jour pour découvrir la programmation.</p>
+            </div>
         {% endif %}
     </section>
 {% endblock %}
