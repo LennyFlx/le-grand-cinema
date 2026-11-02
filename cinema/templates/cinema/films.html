@@ -1,0 +1,20 @@
+<!doctype html>
+<html lang="fr">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Films à l'affiche — Le Grand Cinéma</title>
+</head>
+<body>
+    <main>
+        <h1>Films à l'affiche</h1>
+        <ul>
+            {% for film in films %}
+                <li>{{ film.titre }}</li>
+            {% empty %}
+                <li>Aucun film n'est programmé pour le moment.</li>
+            {% endfor %}
+        </ul>
+    </main>
+</body>
+</html>
