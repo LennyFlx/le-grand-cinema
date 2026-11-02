@@ -5,6 +5,7 @@ from django.contrib.postgres.fields import DateTimeRangeField, RangeOperators
 from django.core.exceptions import ValidationError
 from django.db import models
 from django.db.models import F, Q
+from django.utils import timezone
 
 
 class Film(models.Model):
@@ -140,9 +141,29 @@ class Seance(models.Model):
                     "salle": "Une séance avec des places réservées ne peut pas changer de salle."
                 })
 
+        if self.pk:
+            initiale = Seance.objects.get(pk=self.pk)
+            champs_modifies = any(
+                getattr(self, champ) != getattr(initiale, champ)
+                for champ in ("film_id", "salle_id", "debut", "fin", "prix")
+            )
+            if champs_modifies:
+                if initiale.debut <= timezone.now() or initiale.statut != self.Statut.PROGRAMMEE:
+                    raise ValidationError(
+                        "Seules les séances programmées à venir peuvent être modifiées."
+                    )
+                if self.debut and self.debut <= timezone.now():
+                    raise ValidationError({"debut": "La séance doit commencer dans le futur."})
+                if self.reservations.exists():
+                    raise ValidationError(
+                        "Cette séance possède des réservations : le film, la salle, "
+                        "les horaires et le tarif ne peuvent plus être modifiés. "
+                        "Une annulation avec traitement des réservations reste possible."
+                    )
+
         if self.debut and self.fin and self.fin <= self.debut:
             raise ValidationError({
-                "fin": "La fin doit être postérieure au début."
+                "__all__": "La fin doit être postérieure au début."
             })
 
         salle = Salle.objects.filter(pk=self.salle_id).first()

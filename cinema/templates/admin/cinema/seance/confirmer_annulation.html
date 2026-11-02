@@ -1,0 +1,36 @@
+{% extends "admin/base_site.html" %}
+{% load admin_urls %}
+
+{% block content %}
+    <p>Confirmez-vous l'annulation des séances suivantes ?</p>
+    <ul>
+        {% for seance in seances %}
+            <li>{{ seance }} — {{ seance.salle }} — {{ seance.nombre_reservations }} réservation(s)
+                <ul>
+                    {% for reservation in seance.reservations.all %}
+                        <li>Réservation {{ reservation.pk }} — {{ reservation.email }} — {{ reservation.get_statut_display }}</li>
+                    {% endfor %}
+                </ul>
+            </li>
+        {% endfor %}
+    </ul>
+    <p>Les réservations en attente ou confirmées seront annulées et les billets invalidés.
+       Les séances, réservations et paiements seront conservés dans l'historique.</p>
+    <p><strong>Les spectateurs doivent être informés manuellement. Les paiements réussis
+       et les sessions en attente doivent être vérifiés dans Stripe ; les remboursements
+       éventuels sont à effectuer manuellement. Aucun e-mail ni remboursement automatique
+       n'est déclenché par cette action.</strong></p>
+    <p>Seules les séances programmées à venir peuvent être annulées.
+       Si une séance sélectionnée ne respecte pas cette condition, aucune ne sera annulée.</p>
+    <form method="post">
+        {% csrf_token %}
+        {% for seance in seances %}
+            <input type="hidden" name="{{ action_checkbox_name }}" value="{{ seance.pk }}">
+        {% endfor %}
+        <input type="hidden" name="action" value="annuler_les_seances">
+        <input type="hidden" name="select_across" value="{{ select_across }}">
+        <input type="hidden" name="confirmer" value="oui">
+        <input type="submit" value="Confirmer l'annulation">
+        <a href="{% url opts|admin_urlname:'changelist' %}">Retour sans annuler</a>
+    </form>
+{% endblock %}
