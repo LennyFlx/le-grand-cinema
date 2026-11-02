@@ -78,3 +78,34 @@ class FilmsALAfficheTests(TestCase):
 
     def test_message_sans_programmation(self):
         self.assertContains(self.client.get(self.url), "Aucun film n'est programmé pour le moment.")
+
+    def test_informations_du_film_et_champs_facultatifs(self):
+        from datetime import date
+
+        film = Film.objects.create(
+            titre="Film complet", duree=105,
+            description="Un voyage au cinéma.", date_sortie=date(2026, 10, 21),
+        )
+        self.programmer(film)
+        response = self.client.get(self.url)
+        self.assertTemplateUsed(response, "cinema/base.html")
+        self.assertContains(response, "105 min")
+        self.assertContains(response, "Un voyage au cinéma.")
+        self.assertContains(response, '<time datetime="2026-10-21">21/10/2026</time>', html=True)
+        film.description = ""
+        film.date_sortie = None
+        film.save()
+        response = self.client.get(self.url)
+        self.assertContains(response, "Synopsis non renseigné.")
+        self.assertNotContains(response, "<time")
+
+    def test_titre_et_synopsis_ne_sont_pas_interpretes_comme_html(self):
+        film = Film.objects.create(
+            titre="<script>alert('titre')</script>", duree=90,
+            description="<script>alert('synopsis')</script>\nDeuxième ligne.",
+        )
+        self.programmer(film)
+        response = self.client.get(self.url)
+        self.assertContains(response, "&lt;script&gt;")
+        self.assertContains(response, "<br>")
+        self.assertNotContains(response, "<script>")

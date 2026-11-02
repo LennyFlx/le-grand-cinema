@@ -1,0 +1,36 @@
+{% load static %}
+<!doctype html>
+<html lang="fr">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{% block title %}Le Grand Cinéma{% endblock %}</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{% static 'cinema/css/site.css' %}">
+    {% block extra_head %}{% endblock %}
+</head>
+<body class="flex min-h-screen flex-col bg-white font-sans text-zinc-900 antialiased">
+    <a class="sr-only rounded-md bg-yellow-400 px-4 py-3 font-semibold text-zinc-950 focus:not-sr-only focus:absolute focus:top-3 focus:left-3 focus:z-50 focus:outline-2 focus:outline-offset-4 focus:outline-yellow-400" href="#contenu">Aller au contenu</a>
+    <header class="bg-zinc-900 text-white">
+        <div class="mx-auto flex w-full max-w-6xl flex-wrap items-center justify-between gap-5 px-5 py-6 sm:px-8">
+            <a class="flex min-w-0 items-center gap-3 rounded-sm focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-yellow-400" href="{% url 'cinema:films' %}">
+                <img src="{% static 'cinema/images/logo-grand-cinema.webp' %}" alt="Le Grand Cinéma — Accueil" width="2048" height="683" class="h-auto w-44 max-w-full sm:w-64">
+            </a>
+            <nav aria-label="Navigation principale">
+                <a class="inline-flex min-h-11 items-center justify-center rounded-md bg-yellow-400 px-5 py-2.5 text-sm font-semibold text-zinc-950 hover:bg-yellow-300 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-yellow-400" href="{% url 'cinema:films' %}#films">À l'affiche</a>
+            </nav>
+        </div>
+    </header>
+    <main id="contenu" class="mx-auto w-full max-w-6xl flex-1 px-5 py-10 sm:px-8 sm:py-16" tabindex="-1">
+        {% block content %}{% endblock %}
+    </main>
+    <footer class="border-t border-zinc-200 bg-zinc-50">
+        <div class="mx-auto flex w-full max-w-6xl flex-col gap-2 px-5 py-6 text-sm sm:flex-row sm:items-center sm:justify-between sm:px-8">
+            <p class="font-semibold text-zinc-800">Le Grand Cinéma</p>
+            <p class="text-zinc-600">Le cinéma se partage.</p>
+        </div>
+    </footer>
+</body>
+</html>

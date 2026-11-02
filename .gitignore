@@ -39,3 +39,6 @@ coverage.xml
 # Fichiers système
 .DS_Store
 Thumbs.db
+
+# Dépendances frontend
+node_modules/
