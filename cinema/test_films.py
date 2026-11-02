@@ -109,3 +109,23 @@ class FilmsALAfficheTests(TestCase):
         self.assertContains(response, "&lt;script&gt;")
         self.assertContains(response, "<br>")
         self.assertNotContains(response, "<script>")
+
+    def test_affiche_depuis_media_avec_espaces_dans_le_nom(self):
+        from django.test import override_settings
+
+        film = Film.objects.create(
+            titre="Film illustré", duree=90, affiche="affiches/mon film.webp",
+        )
+        self.programmer(film)
+        with override_settings(MEDIA_URL="/medias-test/"):
+            response = self.client.get(self.url)
+        self.assertContains(response, 'src="/medias-test/affiches/mon%20film.webp"')
+        self.assertContains(response, 'alt="Affiche du film Film illustré"')
+        self.assertNotContains(response, "Affiche non disponible")
+
+    def test_film_sans_affiche_affiche_un_emplacement_de_remplacement(self):
+        film = Film.objects.create(titre="Sans affiche", duree=90)
+        self.programmer(film)
+        response = self.client.get(self.url)
+        self.assertContains(response, "Affiche non disponible")
+        self.assertNotContains(response, 'alt="Affiche du film')
