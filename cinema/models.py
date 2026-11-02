@@ -5,8 +5,66 @@ from django.contrib.postgres.fields import DateTimeRangeField, RangeOperators
 from django.core.exceptions import ValidationError
 from django.db import models
 from django.db.models import F, Q
+from django.db.models.functions import Lower, Trim
 from django.utils import timezone
 
+
+class Personne(models.Model):
+    nom = models.CharField(max_length=150)
+    prenom = models.CharField(max_length=150, blank=True)
+    date_naissance = models.DateField(null=True, blank=True)
+
+    def clean(self):
+        super().clean()
+        self.nom = (self.nom or "").strip()
+        self.prenom = (self.prenom or "").strip()
+        if not self.nom:
+            raise ValidationError({"nom": "Le nom est obligatoire."})
+
+    def save(self, *args, **kwargs):
+        self.nom = (self.nom or "").strip()
+        self.prenom = (self.prenom or "").strip()
+        super().save(*args, **kwargs)
+
+    def __str__(self):
+        identite = f"{self.prenom} {self.nom}".strip()
+        if self.date_naissance:
+            return f"{identite} ({self.date_naissance:%d/%m/%Y})"
+        return identite
+
+    class Meta:
+        ordering = ["nom", "prenom", "pk"]
+        verbose_name = "Personne"
+        verbose_name_plural = "Personnes"
+        constraints = [
+            models.CheckConstraint(condition=Q(nom__regex=r"\S"), name="personne_nom_non_vide"),
+        ]
+
+
+class Genre(models.Model):
+    nom = models.CharField(max_length=100)
+
+    def clean(self):
+        super().clean()
+        self.nom = (self.nom or "").strip()
+        if not self.nom:
+            raise ValidationError({"nom": "Le nom du genre est obligatoire."})
+
+    def save(self, *args, **kwargs):
+        self.nom = (self.nom or "").strip()
+        super().save(*args, **kwargs)
+
+    def __str__(self):
+        return self.nom
+
+    class Meta:
+        ordering = ["nom"]
+        verbose_name = "Genre"
+        verbose_name_plural = "Genres"
+        constraints = [
+            models.UniqueConstraint(Lower(Trim("nom")), name="genre_nom_unique_normalise"),
+            models.CheckConstraint(condition=Q(nom__regex=r"\S"), name="genre_nom_non_vide"),
+        ]
 
 class Film(models.Model):
     titre = models.CharField(max_length=200)
@@ -14,6 +72,7 @@ class Film(models.Model):
     duree = models.PositiveIntegerField(help_text="Durée en minutes")
     date_sortie = models.DateField(null=True, blank=True)
     affiche = models.CharField(max_length=255, blank=True)
+    genres = models.ManyToManyField(Genre, related_name="films", blank=True)
     actif = models.BooleanField(default=True)
 
     def __str__(self):
@@ -30,6 +89,31 @@ class Film(models.Model):
             ),
         ]
 
+
+class Participation(models.Model):
+    class Fonction(models.TextChoices):
+        ACTEUR = "acteur", "Acteur"
+        REALISATEUR = "realisateur", "Réalisateur"
+
+    film = models.ForeignKey(Film, on_delete=models.CASCADE, related_name="participations")
+    personne = models.ForeignKey(Personne, on_delete=models.PROTECT, related_name="participations")
+    fonction = models.CharField(max_length=20, choices=Fonction.choices)
+
+    def __str__(self):
+        return f"{self.personne} — {self.get_fonction_display()} — {self.film}"
+
+    class Meta:
+        ordering = ["film", "fonction", "personne"]
+        verbose_name = "Participation"
+        verbose_name_plural = "Participations"
+        constraints = [
+            models.UniqueConstraint(
+                fields=["film", "personne", "fonction"], name="participation_fonction_unique",
+            ),
+            models.CheckConstraint(
+                condition=Q(fonction__in=["acteur", "realisateur"]), name="participation_fonction_valide",
+            ),
+        ]
 
 class Salle(models.Model):
     nom = models.CharField(max_length=100, unique=True)
