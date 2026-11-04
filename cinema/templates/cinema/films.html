@@ -72,7 +72,7 @@
                             <ul class="mt-auto flex flex-wrap gap-2 border-t border-zinc-100 pt-4" aria-label="Horaires de {{ film.titre }}">
                                 {% for seance in film.seances_du_jour %}
                                     <li>
-                                        <time datetime="{{ seance.debut|date:'c' }}" class="inline-block rounded-md bg-yellow-100 px-3 py-2 text-sm font-semibold text-zinc-950">{{ seance.debut|date:"H:i" }}</time>
+                                        <a href="{% url 'cinema:detail_seance' seance.pk %}" aria-label="Voir les disponibilités de {{ film.titre }} à {{ seance.debut|date:'H:i' }}" class="inline-block min-h-11 rounded-md bg-yellow-100 px-3 py-3 text-sm font-semibold text-zinc-950 hover:bg-yellow-200 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-red-700"><time datetime="{{ seance.debut|date:'c' }}">{{ seance.debut|date:"H:i" }}</time></a>
                                     </li>
                                 {% endfor %}
                             </ul>

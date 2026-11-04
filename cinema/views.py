@@ -4,8 +4,12 @@ from django.db.models import F, Prefetch
 from django.shortcuts import get_object_or_404, render
 from django.utils import timezone
 from django.utils.dateparse import parse_date
+from django.views.decorators.cache import never_cache
+from django.views.decorators.http import require_safe
 
 from .models import Film, Participation, Seance
+from .services import obtenir_disponibilites
+from .plan_salle import organiser_plan
 
 
 def _calendrier(request, maintenant):
@@ -109,4 +113,22 @@ def detail_film(request, pk):
         "a_des_seances_a_venir": a_des_seances_a_venir,
         "realisateurs": [p.personne for p in film.equipe if p.fonction == Participation.Fonction.REALISATEUR],
         "acteurs": [p.personne for p in film.equipe if p.fonction == Participation.Fonction.ACTEUR],
+    })
+
+
+@never_cache
+@require_safe
+def detail_seance(request, pk):
+    maintenant = timezone.now()
+    seance = get_object_or_404(
+        Seance.objects.select_related("film", "salle"),
+        pk=pk, statut=Seance.Statut.PROGRAMMEE, debut__gt=maintenant,
+        film__actif=True, salle__active=True,
+    )
+    disponibilites = obtenir_disponibilites(seance, maintenant)
+    disponibilites["rangees"] = organiser_plan(disponibilites["rangees"])
+    return render(request, "cinema/detail_seance.html", {
+        "seance": seance,
+        "disponibilites": disponibilites,
+        "actualise_a": maintenant,
     })
