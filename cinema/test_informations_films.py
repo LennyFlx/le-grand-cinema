@@ -94,14 +94,12 @@ class InformationsFilmsTests(TestCase):
                     with self.assertRaises(IntegrityError), transaction.atomic():
                         modele.objects.bulk_create([modele(nom=nom)])
 
-    def test_mononyme_et_date_facultative_pour_distinguer_les_personnes(self):
+    def test_mononyme_et_affichage_identite(self):
         mononyme = Personne(nom="Cher")
         mononyme.full_clean()
         mononyme.save()
         self.assertEqual(str(mononyme), "Cher")
-        self.assertIsNone(mononyme.date_naissance)
-        personne = Personne.objects.create(nom="Dupont", prenom="Camille", date_naissance=date(1980, 1, 2))
-        self.assertIn("02/01/1980", str(personne))
+        self.assertEqual(str(self.personne), "Camille Dupont")
 
     def test_personne_associee_protegee_et_retrait_sans_suppression(self):
         participation = Participation.objects.create(
@@ -121,7 +119,7 @@ class InformationsFilmsTests(TestCase):
 class InformationsFilmsMigrationTests(TransactionTestCase):
     def test_migration_conserve_films_seances_et_reservations(self):
         ancienne = [("cinema", "0001_initial")]
-        nouvelle = [("cinema", "0002_informations_films")]
+        nouvelle = [("cinema", "0003_supprimer_date_naissance_personne")]
         executor = MigrationExecutor(connection)
         try:
             executor.migrate(ancienne)
@@ -142,6 +140,19 @@ class InformationsFilmsMigrationTests(TransactionTestCase):
             reservation = ReservationAvant.objects.create(
                 seance=seance, email="spectateur@example.com", date_expiration=debut, montant_total=10,
             )
+            intermediaire = [("cinema", "0002_informations_films")]
+            executor = MigrationExecutor(connection)
+            executor.migrate(intermediaire)
+            modeles_avec_date = executor.loader.project_state(intermediaire).apps
+            personne = modeles_avec_date.get_model("cinema", "Personne").objects.create(
+                nom="Dupont", prenom="Camille", date_naissance=date(1980, 1, 2),
+            )
+            genre = modeles_avec_date.get_model("cinema", "Genre").objects.create(nom="Drame")
+            modeles_avec_date.get_model("cinema", "Film").objects.get(pk=film.pk).genres.add(genre)
+            for fonction in ("acteur", "realisateur"):
+                modeles_avec_date.get_model("cinema", "Participation").objects.create(
+                    film_id=film.pk, personne_id=personne.pk, fonction=fonction,
+                )
             executor = MigrationExecutor(connection)
             executor.migrate(nouvelle)
             nouveaux_modeles = executor.loader.project_state(nouvelle).apps
@@ -152,8 +163,12 @@ class InformationsFilmsMigrationTests(TransactionTestCase):
             self.assertEqual(conserve.affiche, "affiches/existant.webp")
             self.assertEqual(conserve.date_sortie, date(2026, 1, 1))
             self.assertTrue(conserve.actif)
-            self.assertFalse(conserve.genres.exists())
-            self.assertFalse(conserve.participations.exists())
+            self.assertEqual(list(conserve.genres.values_list("pk", flat=True)), [genre.pk])
+            self.assertEqual(conserve.participations.filter(personne_id=personne.pk).count(), 2)
+            PersonneApres = nouveaux_modeles.get_model("cinema", "Personne")
+            conservee = PersonneApres.objects.get(pk=personne.pk)
+            self.assertEqual((conservee.nom, conservee.prenom), ("Dupont", "Camille"))
+            self.assertNotIn("date_naissance", [champ.name for champ in PersonneApres._meta.fields])
             self.assertTrue(nouveaux_modeles.get_model("cinema", "Seance").objects.filter(pk=seance.pk, film_id=film.pk).exists())
             self.assertTrue(nouveaux_modeles.get_model("cinema", "Reservation").objects.filter(pk=reservation.pk, seance_id=seance.pk).exists())
         finally:

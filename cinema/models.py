@@ -12,7 +12,6 @@ from django.utils import timezone
 class Personne(models.Model):
     nom = models.CharField(max_length=150)
     prenom = models.CharField(max_length=150, blank=True)
-    date_naissance = models.DateField(null=True, blank=True)
 
     def clean(self):
         super().clean()
@@ -27,10 +26,7 @@ class Personne(models.Model):
         super().save(*args, **kwargs)
 
     def __str__(self):
-        identite = f"{self.prenom} {self.nom}".strip()
-        if self.date_naissance:
-            return f"{identite} ({self.date_naissance:%d/%m/%Y})"
-        return identite
+        return f"{self.prenom} {self.nom}".strip()
 
     class Meta:
         ordering = ["nom", "prenom", "pk"]

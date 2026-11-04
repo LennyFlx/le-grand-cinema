@@ -301,7 +301,6 @@ Une personne n'est pas définie comme acteur ou réalisateur de manière permane
 | `id`              | BIGINT        | Clé primaire                                 |
 | `nom`             | VARCHAR(150)  | Nom ou nom professionnel, obligatoire         |
 | `prenom`          | VARCHAR(150)  | Prénom, facultatif notamment pour les mononymes |
-| `date_naissance`  | DATE          | Date de naissance, facultative               |
 
 **Règles de gestion :**
 
@@ -309,7 +308,6 @@ Une personne n'est pas définie comme acteur ou réalisateur de manière permane
 - Une même fiche est réutilisée pour tous les films et toutes les fonctions de cette personne.
 - Avant de créer une personne, l'administrateur doit pouvoir rechercher une fiche existante.
 - Le nom et le prénom ne sont pas uniques : plusieurs personnes peuvent être homonymes.
-- La date de naissance facilite leur distinction lorsqu'elle est connue, sans constituer une preuve d'identité unique.
 - Les espaces en début et en fin des noms sont retirés ; le nom ne peut pas être vide après ce nettoyage.
 - Une personne possédant des participations ne peut pas être supprimée tant que ces associations existent.
 
@@ -428,7 +426,6 @@ erDiagram
         bigint id PK
         varchar nom
         varchar prenom "facultatif"
-        date date_naissance "facultative"
     }
 
     GENRE {

@@ -8,14 +8,36 @@ from django.db.models import Count, Q
 from django.utils import timezone
 
 from .forms import SeanceAdminForm
-from .models import Film, Reservation, ReservationPlace, Seance
+from .models import Film, Genre, Participation, Personne, Reservation, ReservationPlace, Seance
 from .services import annuler_seance, enregistrer_seance
 
+
+@admin.register(Personne)
+class PersonneAdmin(admin.ModelAdmin):
+    list_display = ("nom", "prenom")
+    search_fields = ("nom", "prenom")
+    fields = ("nom", "prenom")
+
+
+@admin.register(Genre)
+class GenreAdmin(admin.ModelAdmin):
+    list_display = ("nom",)
+    search_fields = ("nom",)
+
+
+class ParticipationInline(admin.TabularInline):
+    model = Participation
+    fields = ("personne", "fonction")
+    autocomplete_fields = ("personne",)
+    extra = 1
 
 @admin.register(Film)
 class FilmAdmin(admin.ModelAdmin):
     list_display = ("titre", "duree", "actif")
     search_fields = ("titre",)
+    list_filter = ("actif", "genres")
+    autocomplete_fields = ("genres",)
+    inlines = (ParticipationInline,)
     actions = ("retirer_de_la_programmation",)
 
     @admin.action(
