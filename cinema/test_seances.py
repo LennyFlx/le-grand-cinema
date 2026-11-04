@@ -7,7 +7,9 @@ from django.test import TestCase
 from django.urls import reverse
 from django.utils import timezone
 
-from .models import Billet, Film, Paiement, Place, Reservation, ReservationPlace, Salle, Seance
+from .models import Film, Place, Salle, Seance
+from paiements.models import Paiement
+from reservations.models import Billet, Reservation, ReservationPlace
 from .services import annuler_seance, enregistrer_seance
 
 

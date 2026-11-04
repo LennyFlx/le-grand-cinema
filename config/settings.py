@@ -47,6 +47,8 @@ INSTALLED_APPS = [
 
     # Local apps
     'cinema',
+    'reservations.apps.ReservationsConfig',
+    'paiements.apps.PaiementsConfig',
 ]
 
 MIDDLEWARE = [

@@ -8,7 +8,7 @@ from django.views.decorators.cache import never_cache
 from django.views.decorators.http import require_safe
 
 from .models import Film, Participation, Seance
-from .services import obtenir_disponibilites
+from reservations.services import obtenir_disponibilites
 from .plan_salle import organiser_plan
 
 

@@ -4,11 +4,12 @@ from django.template.response import TemplateResponse
 
 from django.core.exceptions import ValidationError
 from django.db import transaction
-from django.db.models import Count, Q
+from django.db.models import Count
 from django.utils import timezone
 
 from .forms import SeanceAdminForm
-from .models import Film, Genre, Participation, Personne, Reservation, ReservationPlace, Seance
+from .models import Film, Genre, Participation, Personne, Seance
+from reservations.services import compter_places_disponibles
 from .services import annuler_seance, enregistrer_seance
 
 
@@ -83,16 +84,7 @@ class SeanceAdmin(admin.ModelAdmin):
     def places_disponibles(self, obj):
         if not obj or not obj.pk:
             return "Selon les places actives de la salle sélectionnée."
-        occupees = ReservationPlace.objects.filter(
-            reservation__seance=obj,
-        ).filter(
-            Q(reservation__statut=Reservation.Statut.CONFIRMEE)
-            | Q(
-                reservation__statut=Reservation.Statut.EN_ATTENTE,
-                reservation__date_expiration__gt=timezone.now(),
-            )
-        ).values("place_id")
-        return obj.salle.places.filter(active=True).exclude(pk__in=occupees).count()
+        return compter_places_disponibles(obj)
 
     def save_model(self, request, obj, form, change):
         enregistrer_seance(obj)

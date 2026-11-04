@@ -5,7 +5,8 @@ from django.db import IntegrityError, transaction
 from django.test import TestCase
 from django.utils import timezone
 
-from .models import Billet, Film, Place, Reservation, ReservationPlace, Salle, Seance
+from .models import Film, Place, Salle, Seance
+from reservations.models import Reservation, ReservationPlace
 from .services import enregistrer_place, enregistrer_salle, enregistrer_seance
 
 
@@ -71,45 +72,8 @@ class ProgrammationTests(TestCase):
         with self.assertRaises(ValidationError):
             enregistrer_salle(self.salle)
 
-    def test_place_reservee_doit_appartenir_a_la_salle(self):
-        reservation = Reservation.objects.create(
-            seance=enregistrer_seance(self.seance()),
-            email="test@example.com",
-            date_expiration=self.debut,
-            montant_total=10,
-        )
-        autre = Salle.objects.create(nom="Autre", capacite=1)
-        place = Place.objects.create(salle=autre, rangee="A", numero=1)
-        association = ReservationPlace(
-            reservation=reservation,
-            place=place,
-            prix_unitaire=10,
-        )
-        with self.assertRaises(ValidationError):
-            association.full_clean()
 
-    def test_billet_exige_reservation_confirmee(self):
-        reservation = Reservation.objects.create(
-            seance=enregistrer_seance(self.seance()),
-            email="test@example.com",
-            date_expiration=self.debut,
-            montant_total=10,
-        )
-        place = enregistrer_place(Place(salle=self.salle, rangee="A", numero=1))
-        association = ReservationPlace.objects.create(
-            reservation=reservation,
-            place=place,
-            prix_unitaire=10,
-        )
-        billet = Billet(reservation_place=association)
-        with self.assertRaises(ValidationError):
-            billet.full_clean()
-        reservation.statut = Reservation.Statut.CONFIRMEE
-        reservation.save()
-        billet.full_clean()
-
-
-class CoherenceReservationsTests(TestCase):
+class CoherenceSeancesReserveesTests(TestCase):
     def setUp(self):
         self.salle = Salle.objects.create(nom="Salle 1", capacite=3)
         self.autre_salle = Salle.objects.create(nom="Salle 2", capacite=3)
@@ -140,20 +104,6 @@ class CoherenceReservationsTests(TestCase):
             prix_unitaire=10,
         )
 
-    def test_remplacement_par_place_inactive_refuse(self):
-        self.association.place = self.place_inactive
-        with self.assertRaisesMessage(ValidationError, "Cette place est inactive."):
-            self.association.full_clean()
-
-    def test_conservation_place_devenue_inactive_autorisee(self):
-        self.place.active = False
-        enregistrer_place(self.place)
-        self.association.prix_unitaire = 12
-        self.association.full_clean()
-        self.association.save()
-        self.association.refresh_from_db()
-        self.assertEqual(self.association.prix_unitaire, 12)
-        self.assertEqual(self.association.place_id, self.place.pk)
 
     def test_seance_avec_places_reservees_ne_change_pas_de_salle(self):
         self.seance.salle = self.autre_salle
