@@ -5,8 +5,9 @@ from zoneinfo import ZoneInfo
 from django.test import TestCase
 from django.urls import reverse
 
-from .models import Film, Place, Reservation, ReservationPlace, Salle, Seance
-from .services import obtenir_disponibilites
+from cinema.models import Film, Place, Salle, Seance
+from .models import Reservation, ReservationPlace
+from .services import compter_places_disponibles, obtenir_disponibilites
 
 
 class DisponibilitesSeanceTests(TestCase):
@@ -175,3 +176,12 @@ class DisponibilitesSeanceTests(TestCase):
             self.disponibilites()
         with self.assertNumQueries(2):
             self.client.get(self.url)
+
+    def test_compteur_admin_identique_au_plan_public(self):
+        self.reserver(self.places[0])
+        self.reserver(self.places[1], statut=Reservation.Statut.EN_ATTENTE)
+        self.reserver(self.places[2], statut=Reservation.Statut.EN_ATTENTE, expiration=self.maintenant)
+        with self.assertNumQueries(1):
+            compteur = compter_places_disponibles(self.seance, self.maintenant)
+        self.assertEqual(compteur, self.disponibilites()["disponibles"])
+        self.assertEqual(compteur, 1)

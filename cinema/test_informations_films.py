@@ -173,4 +173,5 @@ class InformationsFilmsMigrationTests(TransactionTestCase):
             self.assertTrue(nouveaux_modeles.get_model("cinema", "Reservation").objects.filter(pk=reservation.pk, seance_id=seance.pk).exists())
         finally:
             # Toujours restaurer le schéma courant avant le nettoyage de la base de test.
-            MigrationExecutor(connection).migrate(nouvelle)
+            restauration = MigrationExecutor(connection)
+            restauration.migrate(restauration.loader.graph.leaf_nodes())
