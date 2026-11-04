@@ -1,11 +1,11 @@
 from datetime import date, datetime, time, timedelta
 
 from django.db.models import F, Prefetch
-from django.shortcuts import render
+from django.shortcuts import get_object_or_404, render
 from django.utils import timezone
 from django.utils.dateparse import parse_date
 
-from .models import Film, Seance
+from .models import Film, Participation, Seance
 
 
 def films_a_l_affiche(request):
@@ -46,4 +46,23 @@ def films_a_l_affiche(request):
         "jour_selectionne": jour_selectionne,
         "date_personnalisee": jour_selectionne not in jours,
         "afficher_calendrier": jour_selectionne not in jours or request.GET.get("calendrier") == "1",
+    })
+
+
+def detail_film(request, pk):
+    catalogue = Film.objects.filter(actif=True).prefetch_related(
+        "genres",
+        Prefetch(
+            "participations",
+            queryset=Participation.objects.select_related("personne").order_by(
+                "personne__nom", "personne__prenom", "pk",
+            ),
+            to_attr="equipe",
+        ),
+    )
+    film = get_object_or_404(catalogue, pk=pk)
+    return render(request, "cinema/detail_film.html", {
+        "film": film,
+        "realisateurs": [p.personne for p in film.equipe if p.fonction == Participation.Fonction.REALISATEUR],
+        "acteurs": [p.personne for p in film.equipe if p.fonction == Participation.Fonction.ACTEUR],
     })
