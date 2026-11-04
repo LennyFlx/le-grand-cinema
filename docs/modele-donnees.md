@@ -28,11 +28,14 @@ Les données sont organisées autour des principales fonctionnalités de l'appli
 - Génération et consultation des billets numériques.
 - Administration de la plateforme.
 
-Le modèle repose sur huit entités métier principales :
+Le modèle repose sur onze entités métier principales, dont les associations `ReservationPlace` et `Participation` :
 
 | Entité             | Responsabilité                           |
 |--------------------|------------------------------------------|
 | `Film`             | Informations relatives aux films         |
+| `Personne`         | Référentiel partagé des acteurs et réalisateurs |
+| `Genre`            | Référentiel des genres cinématographiques |
+| `Participation`    | Fonction d'une personne dans un film      |
 | `Salle`            | Organisation des salles du cinéma        |
 | `Place`            | Identification des places physiques      |
 | `Seance`           | Programmation des projections            |
@@ -40,6 +43,9 @@ Le modèle repose sur huit entités métier principales :
 | `ReservationPlace` | Association des places aux réservations  |
 | `Paiement`         | Suivi des transactions Stripe            |
 | `Billet`           | Gestion des billets dématérialisés       |
+
+Les genres sont associés aux films par une relation plusieurs-à-plusieurs. Une table de liaison technique
+`FilmGenre` complète les entités ci-dessus ; elle sera créée automatiquement par Django.
 
 Les comptes du personnel administratif seront gérés avec le système d'authentification intégré à Django.
 
@@ -68,6 +74,9 @@ L'entité `Film` représente un film proposé dans la programmation du cinéma.
 **Règles de gestion :**
 
 - Un film peut être associé à plusieurs séances.
+- Un film peut être associé à plusieurs genres et à plusieurs personnes par leurs participations.
+- Les noms des acteurs, réalisateurs et genres ne sont pas dupliqués dans des champs texte du film.
+- Ces associations sont facultatives : un film peut être enregistré avant l'ajout de ses informations complémentaires.
 - Chaque séance concerne un seul film.
 - La durée d'un film doit être strictement positive.
 - Un film désactivé peut être conservé afin de préserver l'historique de la programmation.
@@ -282,12 +291,93 @@ Les billets pourront être générés au format PDF et éventuellement comporter
 Le contenu du document sera produit à partir des informations de réservation et des données associées, afin d'éviter de
 dupliquer inutilement ces informations dans la table `Billet`.
 
+### 3.9. Personne
+
+L'entité `Personne` représente une personne du cinéma, réutilisable pour plusieurs films.
+Une personne n'est pas définie comme acteur ou réalisateur de manière permanente : sa fonction dépend du film.
+
+| Attribut          | Type envisagé | Description                                  |
+|-------------------|---------------|----------------------------------------------|
+| `id`              | BIGINT        | Clé primaire                                 |
+| `nom`             | VARCHAR(150)  | Nom ou nom professionnel, obligatoire         |
+| `prenom`          | VARCHAR(150)  | Prénom, facultatif notamment pour les mononymes |
+
+**Règles de gestion :**
+
+- Une personne peut être enregistrée sans être encore associée à un film.
+- Une même fiche est réutilisée pour tous les films et toutes les fonctions de cette personne.
+- Avant de créer une personne, l'administrateur doit pouvoir rechercher une fiche existante.
+- Le nom et le prénom ne sont pas uniques : plusieurs personnes peuvent être homonymes.
+- Les espaces en début et en fin des noms sont retirés ; le nom ne peut pas être vide après ce nettoyage.
+- Une personne possédant des participations ne peut pas être supprimée tant que ces associations existent.
+
+La réutilisation des fiches évite de ressaisir les mêmes informations. Elle ne garantit pas à elle seule l'absence de
+fiches en double : l'interface de recherche permet leur vérification sans interdire les homonymes légitimes.
+
+### 3.10. Genre
+
+L'entité `Genre` représente un genre cinématographique partagé, par exemple « Comédie », « Drame » ou « Animation ».
+Le terme « genre » couvre ici le besoin de catégorie du film, sans ajouter un second référentiel équivalent.
+
+| Attribut | Type envisagé | Description                  |
+|----------|---------------|------------------------------|
+| `id`     | BIGINT        | Clé primaire                 |
+| `nom`    | VARCHAR(100)  | Libellé obligatoire du genre  |
+
+**Règles de gestion :**
+
+- Un genre peut être associé à zéro, un ou plusieurs films.
+- Un film peut être associé à zéro, un ou plusieurs genres.
+- Les espaces en début et en fin du libellé sont retirés ; un libellé vide est refusé.
+- Le nom est unique sans distinction de casse et après retrait de ces espaces : « Drame », « drame » et
+  « Drame » entouré d'espaces ne constituent pas des genres différents.
+- Un genre existant est sélectionné depuis le référentiel au lieu d'être ressaisi pour chaque film.
+
+### 3.11. Participation
+
+L'association `Participation` relie une personne à un film en précisant sa fonction.
+
+| Attribut      | Type envisagé | Description                              |
+|---------------|---------------|------------------------------------------|
+| `id`          | BIGINT        | Clé primaire                             |
+| `film_id`     | BIGINT        | Clé étrangère vers `Film`                |
+| `personne_id` | BIGINT        | Clé étrangère vers `Personne`            |
+| `fonction`    | VARCHAR(20)   | `acteur` ou `realisateur`, obligatoire    |
+
+**Règles de gestion :**
+
+- Chaque participation concerne exactement un film et une personne.
+- Un film peut avoir plusieurs acteurs et plusieurs réalisateurs.
+- Une personne peut être acteur dans un film et réalisateur dans un autre.
+- Une personne peut être à la fois acteur et réalisateur d'un même film : deux participations sont alors enregistrées.
+- Le triplet `(film_id, personne_id, fonction)` est unique, pour empêcher l'ajout en double d'une même fonction.
+- Seules les fonctions `acteur` et `realisateur` sont autorisées.
+- Retirer une participation ne supprime ni la personne ni le film.
+
+### 3.12. Liaison technique FilmGenre
+
+La relation plusieurs-à-plusieurs entre `Film` et `Genre` sera implémentée avec un champ `ManyToManyField` sur `Film`.
+Django créera la table intermédiaire, représentée ici sous le nom logique `FilmGenre`, sans modèle explicite supplémentaire.
+
+| Attribut   | Type envisagé | Description                    |
+|------------|---------------|--------------------------------|
+| `id`       | BIGINT        | Clé primaire technique         |
+| `film_id`  | BIGINT        | Clé étrangère vers `Film`      |
+| `genre_id` | BIGINT        | Clé étrangère vers `Genre`     |
+
+Le couple `(film_id, genre_id)` est unique. Retirer un genre d'un film supprime seulement cette association,
+sans supprimer le genre du référentiel ni le film du catalogue.
+
 ## 4. Relations et cardinalités
 
 Les relations entre les entités sont définies comme suit :
 
 | Relation                       | Cardinalités                                                                                                       |
 |--------------------------------|--------------------------------------------------------------------------------------------------------------------|
+| Film — Participation          | Un film possède 0 à N participations ; une participation concerne exactement 1 film                               |
+| Personne — Participation      | Une personne possède 0 à N participations ; une participation concerne exactement 1 personne                       |
+| Film — FilmGenre              | Un film possède 0 à N associations de genre ; une association concerne exactement 1 film                          |
+| Genre — FilmGenre             | Un genre possède 0 à N associations à des films ; une association concerne exactement 1 genre                      |
 | Film — Séance                  | Un film possède 0 à N séances ; une séance concerne exactement 1 film                                              |
 | Salle — Séance                 | Une salle accueille 0 à N séances ; une séance utilise exactement 1 salle                                          |
 | Salle — Place                  | Une salle contient 1 à N places ; une place appartient exactement à 1 salle                                        |
@@ -302,13 +392,17 @@ création. Elle n'est pas garantie par la seule présence des clés étrangères
 
 ## 5. Diagramme global des données
 
-Le diagramme suivant présente les huit entités principales, leurs attributs ainsi que leurs relations.
+Le diagramme suivant présente les onze entités métier et la table technique de liaison des genres, leurs attributs et leurs relations.
 
 Il correspond à une représentation logique simplifiée, proche d'un diagramme entité-association, intégrant les clés
 primaires et étrangères.
 
 ```mermaid
 erDiagram
+    PERSONNE ||--o{ PARTICIPATION: "participe"
+    FILM ||--o{ PARTICIPATION: "possede"
+    FILM ||--o{ FILM_GENRE: "est classe"
+    GENRE ||--o{ FILM_GENRE: "qualifie"
     FILM ||--o{ SEANCE: "est projete"
     SALLE ||--o{ SEANCE: "accueille"
     SALLE ||--|{ PLACE: "contient"
@@ -326,6 +420,30 @@ erDiagram
         date date_sortie
         varchar affiche
         boolean actif
+    }
+
+    PERSONNE {
+        bigint id PK
+        varchar nom
+        varchar prenom "facultatif"
+    }
+
+    GENRE {
+        bigint id PK
+        varchar nom "unique sans distinction de casse"
+    }
+
+    PARTICIPATION {
+        bigint id PK
+        bigint film_id FK
+        bigint personne_id FK
+        varchar fonction "acteur ou realisateur"
+    }
+
+    FILM_GENRE {
+        bigint id PK
+        bigint film_id FK
+        bigint genre_id FK
     }
 
     SALLE {
@@ -398,6 +516,13 @@ applicatifs et transactionnels complémentaires.
 
 Plusieurs contraintes devront garantir la cohérence des données :
 
+- **Unicité des genres :** les libellés sont obligatoires et uniques sans distinction de casse après retrait des espaces
+  en début et en fin. Cette unicité doit aussi être garantie en base, afin de couvrir les créations simultanées.
+- **Participations :** le triplet `(film_id, personne_id, fonction)` est unique et les fonctions sont limitées à
+  `acteur` et `realisateur`. Les homonymes restent autorisés dans `Personne`.
+- **Classification des films :** le couple `(film_id, genre_id)` est unique dans la table de liaison.
+- **Compatibilité des films existants :** l'ajout des référentiels ne rend aucune association obligatoire, ne supprime
+  aucune donnée existante et ne nécessite aucun changement de l'affichage public.
 - **Unicité des places :** une même salle ne peut pas contenir deux places possédant la même rangée et le même numéro.
 - **Intégrité référentielle :** les relations entre les entités seront garanties par des clés étrangères.
 - **Cohérence des séances :** une séance doit posséder une date de fin postérieure à sa date de début et ne doit pas
