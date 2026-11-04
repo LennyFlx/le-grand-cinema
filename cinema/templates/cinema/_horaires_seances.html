@@ -1,0 +1,11 @@
+<ul class="mt-3 space-y-2" aria-label="Horaires des séances">
+    {% for seance in seances %}
+        <li>
+            <a href="{% url 'cinema:detail_seance' seance.pk %}" aria-label="Voir les disponibilités du {{ seance.debut|date:'d/m/Y' }} à {{ seance.debut|date:'H:i' }}, {{ seance.salle.nom }}"
+               class="flex min-h-11 flex-wrap items-center justify-between gap-2 rounded-md bg-yellow-100 px-3 py-3 text-sm hover:bg-yellow-200 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-red-700">
+                <time datetime="{{ seance.debut|date:'c' }}" class="font-bold text-zinc-950">{{ seance.debut|date:"H:i" }}</time>
+                <span class="wrap-anywhere text-zinc-600">{{ seance.salle.nom }}</span>
+            </a>
+        </li>
+    {% endfor %}
+</ul>

@@ -1,13 +1,14 @@
-"""Points d'entrée pour les écritures nécessitant une validation métier.
+"""Services métier de programmation, de réservation et de disponibilité.
 
 Les écritures directes via update/bulk_create contournent ces contrôles.
 """
 
 from django.core.exceptions import ValidationError
 from django.db import transaction
+from django.db.models import Exists, OuterRef, Q
 from django.utils import timezone
 
-from .models import Billet, Paiement, Reservation, Salle, Seance
+from .models import Billet, Paiement, Reservation, ReservationPlace, Salle, Seance
 
 
 @transaction.atomic
@@ -63,3 +64,40 @@ def annuler_seance(seance):
     actuelle.statut = Seance.Statut.ANNULEE
     actuelle.save(update_fields=["statut"])
     return paiements_a_traiter
+
+
+def obtenir_disponibilites(seance, maintenant=None):
+    """Lit l'état des places, sans changer le statut des réservations expirées."""
+    maintenant = maintenant if maintenant is not None else timezone.now()
+    occupations = ReservationPlace.objects.filter(
+        place_id=OuterRef("pk"), reservation__seance=seance,
+    ).filter(
+        Q(reservation__statut=Reservation.Statut.CONFIRMEE)
+        | Q(
+            reservation__statut=Reservation.Statut.EN_ATTENTE,
+            reservation__date_expiration__gt=maintenant,
+        )
+    )
+    places = seance.salle.places.annotate(occupee=Exists(occupations)).order_by("rangee", "numero")
+    rangees = {}
+    total = 0
+    disponibles = 0
+    for place in places:
+        if not place.active:
+            statut, libelle = "inactive", "Hors service"
+        else:
+            total += 1
+            if place.occupee:
+                statut, libelle = "occupee", "Indisponible"
+            else:
+                statut, libelle = "disponible", "Disponible"
+                disponibles += 1
+        rangees.setdefault(place.rangee, []).append({
+            "numero": place.numero, "statut": statut, "libelle": libelle,
+        })
+    return {
+        "rangees": [{"nom": nom, "places": places} for nom, places in rangees.items()],
+        "total": total,
+        "disponibles": disponibles,
+        "complet": total > 0 and disponibles == 0,
+    }
