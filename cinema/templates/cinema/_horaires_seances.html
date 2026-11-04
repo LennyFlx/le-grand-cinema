@@ -1,0 +1,8 @@
+<ul class="mt-3 space-y-2" aria-label="Horaires des séances">
+    {% for seance in seances %}
+        <li class="flex flex-wrap items-center justify-between gap-2 rounded-md bg-zinc-50 px-3 py-3 text-sm">
+            <time datetime="{{ seance.debut|date:'c' }}" class="font-bold text-zinc-950">{{ seance.debut|date:"H:i" }}</time>
+            <span class="wrap-anywhere text-zinc-600">{{ seance.salle.nom }}</span>
+        </li>
+    {% endfor %}
+</ul>
