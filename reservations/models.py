@@ -29,7 +29,6 @@ class Reservation(models.Model):
     montant_total = models.DecimalField(max_digits=8, decimal_places=2)
 
     class Meta:
-        db_table = "cinema_reservation"
         ordering = ["-date_creation"]
         constraints = [
             models.CheckConstraint(condition=Q(montant_total__gte=0),
@@ -72,7 +71,6 @@ class ReservationPlace(models.Model):
                         {"place": "Cette place est inactive."})
 
     class Meta:
-        db_table = "cinema_reservationplace"
         constraints = [
             models.UniqueConstraint(
                 fields=["reservation", "place"],
@@ -117,6 +115,3 @@ class Billet(models.Model):
             raise ValidationError({
                 "reservation_place": "La réservation doit être confirmée pour émettre un billet valide."
             })
-
-    class Meta:
-        db_table = "cinema_billet"

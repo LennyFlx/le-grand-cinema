@@ -18,13 +18,15 @@ class SeparationApplicationsMigrationTests(TransactionTestCase):
         ContentType.objects.clear_cache()
         return executor.loader.project_state(list(executor.recorder.applied_migrations())).apps
 
-    def identifiants_tables(self):
-        tables = ("cinema_reservation", "cinema_reservationplace", "cinema_billet", "cinema_paiement")
+    def identifiants_tables(self, anciennes=False):
+        tables = {"reservation": "reservations", "reservationplace": "reservations", "billet": "reservations", "paiement": "paiements"}
         with connection.cursor() as curseur:
             identifiants = {}
-            for table in tables:
+            for modele, application in tables.items():
+                prefixe = "cinema" if anciennes else application
+                table = f"{prefixe}_{modele}"
                 curseur.execute("SELECT %s::regclass::oid", [table])
-                identifiants[table] = curseur.fetchone()[0]
+                identifiants[modele] = curseur.fetchone()[0]
         return identifiants
 
     def test_transfert_reversible_conserve_donnees_relations_tables_et_permissions(self):
@@ -76,7 +78,7 @@ class SeparationApplicationsMigrationTests(TransactionTestCase):
                 user=utilisateur, content_type_id=identifiants_types["reservation"],
                 object_id=str(reservation.pk), object_repr="Réservation conservée", action_flag=1,
             )
-            tables_avant = self.identifiants_tables()
+            tables_avant = self.identifiants_tables(anciennes=True)
             nouveau = self.migrer(cibles_courantes)
 
             Reservation = nouveau.get_model("reservations", "Reservation")
@@ -124,7 +126,7 @@ class SeparationApplicationsMigrationTests(TransactionTestCase):
             self.assertEqual(restaure.get_model("cinema", "Reservation").objects.get(pk=reservation.pk).places.get().pk, association.pk)
             self.assertTrue(restaure.get_model("cinema", "Paiement").objects.filter(pk=paiement.pk, reservation_id=reservation.pk).exists())
             self.assertTrue(restaure.get_model("cinema", "Billet").objects.filter(pk=billet.pk, reservation_place_id=association.pk).exists())
-            self.assertEqual(self.identifiants_tables(), tables_avant)
+            self.assertEqual(self.identifiants_tables(anciennes=True), tables_avant)
             for modele in applications:
                 self.assertEqual(types.objects.get(app_label="cinema", model=modele).pk, identifiants_types[modele])
         finally:

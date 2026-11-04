@@ -25,7 +25,6 @@ class Paiement(models.Model):
     date_confirmation = models.DateTimeField(null=True, blank=True)
 
     class Meta:
-        db_table = "cinema_paiement"
         constraints = [models.CheckConstraint(
             condition=Q(montant__gte=0),
             name="paiement_montant_non_negatif")
