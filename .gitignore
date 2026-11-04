@@ -42,3 +42,7 @@ Thumbs.db
 
 # Dépendances frontend
 node_modules/
+
+# Fixtures de démonstration générées avec des dates configurables
+cinema/fixtures/seances_demo.json
+cinema/fixtures/reservations_demo.json
