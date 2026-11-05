@@ -4,49 +4,119 @@
 {% block title %}Votre réservation — Le Grand Cinéma{% endblock %}
 
 {% block content %}
-<section class="mx-auto max-w-2xl rounded-lg border border-zinc-200 border-t-4 border-t-red-700 bg-white p-6" aria-labelledby="reservation-titre">
-    <h1 id="reservation-titre" class="text-2xl font-bold">{% if active %}Vos places sont temporairement réservées{% else %}Réservation {{ reservation.get_statut_display|lower }}{% endif %}</h1>
+{% get_media_prefix as media_prefix %}
+{% with film=reservation.seance.film places=reservation.places.all %}
+    <a href="{% url 'cinema:films' %}" class="mb-6 inline-flex min-h-11 items-center rounded-sm text-sm font-medium text-zinc-600 underline underline-offset-4 hover:text-red-700 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-red-700">Retour à la programmation</a>
+
+    <header class="mb-8">
+        <h1 class="text-3xl font-bold tracking-tight sm:text-4xl">{% if active %}Votre réservation{% else %}Réservation {{ reservation.get_statut_display|lower }}{% endif %}</h1>
+        {% if active %}
+            <p class="mt-3 text-zinc-600">Vos places sont temporairement réservées. Vérifiez votre séance avant de passer au paiement.</p>
+        {% endif %}
+    </header>
+
     {% for message in messages %}
-        <p class="mt-4 text-red-800" role="alert">{{ message }}</p>
+        <p class="mb-6 rounded-md border border-red-300 bg-red-50 p-4 text-red-800" role="alert">{{ message }}</p>
     {% endfor %}
-    <p class="mt-4 font-semibold">{{ reservation.seance.film.titre }}</p>
-    <p class="mt-2 text-zinc-600">{{ reservation.seance.debut|date:"l d F Y à H:i" }} · {{ reservation.seance.salle.nom }}</p>
-    <ul class="my-6 flex flex-wrap gap-2" aria-label="Places de la réservation">
-        {% for association in reservation.places.all %}<li class="rounded-md bg-yellow-100 px-3 py-2 font-semibold">{{ association.place.rangee }}{{ association.place.numero }}</li>{% endfor %}
-    </ul>
-    <p class="text-xl font-bold">Total : {{ reservation.montant_total }} €</p>
-    <p class="mt-2 text-sm text-zinc-600">Adresse email : {{ reservation.email }}</p>
-    {% if active %}
-        <p class="mt-6 font-semibold">Vos places sont bloquées jusqu’à <time datetime="{{ reservation.date_expiration|date:'c' }}">{{ reservation.date_expiration|date:"H:i:s" }}</time>.</p>
-        <p class="mt-2 text-red-800">Temps restant : <span data-compte-rebours data-secondes="{{ secondes_restantes }}">{{ secondes_restantes }} secondes</span></p>
-        <p class="mt-4 text-sm text-zinc-600">À cette échéance, les places sont libérées si aucun paiement n’est en cours de vérification. Actualiser cette page ne prolonge pas le délai.</p>
-    {% elif verification_paiement %}
-        <p class="mt-6 text-zinc-600" role="status">Vérification du paiement en cours. Vos places restent réservées pendant cette vérification.</p>
-    {% elif reservation.statut == 'expiree' %}
-        <p class="mt-6 text-red-800" role="status">Le délai est écoulé. Vos places ne sont plus bloquées par cette réservation.</p>
-    {% endif %}
-    {% if reservation.statut == 'confirmee' %}
-        <p class="mt-6 font-semibold" role="status">Votre paiement est confirmé et votre réservation est enregistrée.</p>
-    {% elif paiement_possible %}
-        {% if retour_annulation %}
-            <p class="mt-6 text-zinc-600" role="status">Le paiement n’a pas été finalisé. Vous pouvez le reprendre.</p>
-        {% elif retour_paiement %}
-            <p class="mt-6 text-zinc-600" role="status">La confirmation du paiement est en cours.</p>
-        {% endif %}
-        {% if not paiement_deja_demarre %}
-            <p class="mt-4 text-sm text-zinc-600">Vous disposerez de 31 minutes pour payer à partir du premier clic sur « Payer ».</p>
-        {% endif %}
-        <form method="post" action="{% url 'paiements:payer_reservation' reservation.pk %}" class="mt-6">
-            {% csrf_token %}
-            <button type="submit" class="inline-flex min-h-11 cursor-pointer items-center justify-center rounded-md bg-yellow-400 px-5 py-3 font-semibold text-zinc-950 hover:bg-yellow-300 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-yellow-400">{% if paiement_deja_demarre %}Reprendre le paiement{% else %}Payer {{ reservation.montant_total }} €{% endif %}</button>
-        </form>
-    {% elif active %}
-        <p class="mt-6 text-red-800" role="status">Le paiement en ligne n’est plus disponible pour cette séance. Il ferme 31 minutes avant son début.</p>
-    {% endif %}
-    {% if verification_paiement or retour_paiement %}
-        <a href="{% url 'reservations:detail_reservation' reservation.pk %}?retour=verification" class="mt-6 inline-flex min-h-11 items-center rounded-md border border-zinc-300 px-5 py-3 font-semibold hover:bg-zinc-50">Actualiser la réservation</a>
-    {% endif %}
-    <a href="{% url 'cinema:films' %}" class="mt-6 inline-flex min-h-11 items-center rounded-md border border-zinc-300 px-5 py-3 font-semibold hover:bg-zinc-50">Retour à la programmation</a>
-</section>
+
+    <div class="grid min-w-0 items-start gap-6 lg:grid-cols-[minmax(0,1fr)_22rem] lg:gap-8">
+        <section class="min-w-0 rounded-lg border border-zinc-200 bg-white p-5 sm:p-6" aria-labelledby="reservation-film">
+            <div class="flex items-start gap-4 sm:gap-6">
+                {% if film.affiche %}
+                    <img src="{{ media_prefix }}{{ film.affiche|urlencode }}"
+                         alt="Affiche du film {{ film.titre }}" width="160" height="240"
+                         class="aspect-2/3 w-24 shrink-0 rounded-md bg-zinc-100 object-contain sm:w-32">
+                {% else %}
+                    <div class="flex aspect-2/3 w-24 shrink-0 items-center justify-center rounded-md bg-zinc-100 px-2 text-center text-xs text-zinc-500 sm:w-32">Affiche non disponible</div>
+                {% endif %}
+                <div class="min-w-0 flex-1">
+                    <p class="text-xs font-semibold tracking-widest text-red-700 uppercase">Votre séance</p>
+                    <h2 id="reservation-film" class="mt-2 text-xl leading-tight font-bold wrap-anywhere sm:text-2xl">{{ film.titre }}</h2>
+                    <p class="mt-2 text-sm text-zinc-500">{{ film.duree }} min</p>
+                    <dl class="mt-5 grid gap-4 text-sm sm:grid-cols-2">
+                        <div class="min-w-0">
+                            <dt class="text-zinc-500">Date et heure</dt>
+                            <dd class="mt-1 font-semibold">
+                                <time datetime="{{ reservation.seance.debut|date:'c' }}" class="block wrap-anywhere">{{ reservation.seance.debut|date:"l d F Y" }}<span class="mt-1 block">à {{ reservation.seance.debut|date:"H:i" }}</span></time>
+                            </dd>
+                        </div>
+                        <div class="min-w-0">
+                            <dt class="text-zinc-500">Salle</dt>
+                            <dd class="mt-1 font-semibold wrap-anywhere">{{ reservation.seance.salle.nom }}</dd>
+                        </div>
+                    </dl>
+                </div>
+            </div>
+
+            <section class="mt-6 border-t border-zinc-200 pt-5" aria-labelledby="reservation-places">
+                <div class="flex flex-wrap items-baseline justify-between gap-2">
+                    <h3 id="reservation-places" class="font-semibold">Vos places</h3>
+                    <p class="text-sm text-zinc-500">{{ places|length }} place{{ places|length|pluralize }}</p>
+                </div>
+                <ul class="mt-4 flex flex-wrap gap-2" aria-label="Places de la réservation">
+                    {% for association in places %}
+                        <li class="rounded-md border border-yellow-200 bg-yellow-100 px-4 py-2 font-semibold">{{ association.place.rangee }}{{ association.place.numero }}</li>
+                    {% endfor %}
+                </ul>
+            </section>
+
+            <dl class="mt-6 border-t border-zinc-200 pt-5 text-sm">
+                <dt class="text-zinc-500">Adresse email de la réservation</dt>
+                <dd class="mt-2 font-medium wrap-anywhere">{{ reservation.email }}</dd>
+            </dl>
+        </section>
+
+        <aside class="min-w-0 rounded-lg border border-zinc-200 border-t-4 border-t-red-700 bg-white p-5 sm:p-6 lg:sticky lg:top-6" aria-labelledby="reservation-paiement">
+            <h2 id="reservation-paiement" class="text-xl font-bold">Votre paiement</h2>
+            <dl class="mt-5 flex flex-wrap items-end justify-between gap-3">
+                <div>
+                    <dt class="text-sm text-zinc-500">Total de la réservation</dt>
+                    <dd class="mt-1 text-sm text-zinc-600">{{ places|length }} place{{ places|length|pluralize }}</dd>
+                </div>
+                <div>
+                    <dt class="sr-only">Montant total</dt>
+                    <dd class="text-3xl font-bold whitespace-nowrap tabular-nums">{{ reservation.montant_total }} €</dd>
+                </div>
+            </dl>
+
+            {% if active %}
+                <div class="mt-6 rounded-md bg-red-50 p-4 text-red-800">
+                    <p class="text-sm font-medium">Temps restant pour vos places</p>
+                    <p class="mt-2 text-3xl font-bold tabular-nums"><span data-compte-rebours data-secondes="{{ secondes_restantes }}">{{ secondes_restantes }} secondes</span></p>
+                    <p class="mt-2 text-sm">Places bloquées jusqu’à <time datetime="{{ reservation.date_expiration|date:'c' }}" class="font-semibold">{{ reservation.date_expiration|date:"H:i:s" }}</time>.</p>
+                </div>
+                <p class="mt-3 text-xs leading-relaxed text-zinc-500">À cette échéance, les places sont libérées si aucun paiement n’est en cours de vérification. Actualiser cette page ne prolonge pas le délai.</p>
+            {% elif verification_paiement %}
+                <p class="mt-6 text-zinc-600" role="status">Vérification du paiement en cours. Vos places restent réservées pendant cette vérification.</p>
+            {% elif reservation.statut == 'expiree' %}
+                <p class="mt-6 text-red-800" role="status">Le délai est écoulé. Vos places ne sont plus bloquées par cette réservation.</p>
+            {% endif %}
+
+            {% if reservation.statut == 'confirmee' %}
+                <p class="mt-6 font-semibold" role="status">Votre paiement est confirmé et votre réservation est enregistrée.</p>
+            {% elif paiement_possible %}
+                {% if retour_annulation %}
+                    <p class="mt-6 text-zinc-600" role="status">Le paiement n’a pas été finalisé. Vous pouvez le reprendre.</p>
+                {% elif retour_paiement %}
+                    <p class="mt-6 text-zinc-600" role="status">La confirmation du paiement est en cours.</p>
+                {% endif %}
+                {% if not paiement_deja_demarre %}
+                    <p class="mt-5 text-sm leading-relaxed text-zinc-600">Vous disposerez de 31 minutes pour payer à partir du premier clic sur « Payer ».</p>
+                {% endif %}
+                <form method="post" action="{% url 'paiements:payer_reservation' reservation.pk %}" class="mt-5">
+                    {% csrf_token %}
+                    <button type="submit" class="inline-flex min-h-12 w-full cursor-pointer items-center justify-center rounded-md bg-yellow-400 px-5 py-3 font-semibold text-zinc-950 hover:bg-yellow-300 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-red-700">{% if paiement_deja_demarre %}Reprendre le paiement{% else %}Payer {{ reservation.montant_total }} €{% endif %}</button>
+                </form>
+                <p class="mt-3 text-center text-xs leading-relaxed text-zinc-500">Vous serez redirigé vers Stripe pour régler par carte.</p>
+            {% elif active %}
+                <p class="mt-6 text-red-800" role="status">Le paiement en ligne n’est plus disponible pour cette séance. Il ferme 31 minutes avant son début.</p>
+            {% endif %}
+
+            {% if verification_paiement or retour_paiement %}
+                <a href="{% url 'reservations:detail_reservation' reservation.pk %}?retour=verification" class="mt-6 inline-flex min-h-11 w-full items-center justify-center rounded-md border border-zinc-300 px-5 py-3 text-center font-semibold hover:bg-zinc-50 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-red-700">Actualiser la réservation</a>
+            {% endif %}
+        </aside>
+    </div>
+{% endwith %}
 {% if active %}<script src="{% static 'reservations/js/compte_rebours.js' %}" defer></script>{% endif %}
 {% endblock %}
