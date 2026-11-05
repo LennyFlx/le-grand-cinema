@@ -90,7 +90,7 @@ class DisponibilitesSeanceTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertTemplateUsed(response, "cinema/detail_seance.html")
         self.assertContains(response, "2 places disponibles sur 3")
-        self.assertContains(response, 'aria-label="Place A1 : Indisponible"')
+        self.assertContains(response, 'aria-label="Place A1 : Réservée"')
         self.assertContains(response, 'aria-label="Place A2 : Disponible"')
         self.assertContains(response, 'aria-label="Place A4 : Hors service"')
         self.assertNotContains(response, "prive@example.com")
