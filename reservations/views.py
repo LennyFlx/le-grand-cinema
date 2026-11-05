@@ -1,16 +1,23 @@
 from math import ceil
 
-from django.core.exceptions import ValidationError
+from django.contrib import messages
+from django.core.exceptions import ImproperlyConfigured, ValidationError
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 from django.views.decorators.cache import never_cache
 from django.views.decorators.http import require_POST, require_safe
+from stripe import StripeError
 
 from cinema.models import Seance
 from cinema.plan_salle import organiser_plan
+from paiements.models import Paiement
+from paiements.services import DUREE_PAIEMENT_CHECKOUT, actualiser_paiement
 from .forms import ReservationProvisoireForm, SelectionPlacesForm
 from .models import Reservation
-from .services import creer_reservation_provisoire, obtenir_disponibilites
+from .services import (
+    creer_reservation_provisoire, obtenir_disponibilites,
+    reservations_a_expirer, reservations_provisoires_actives,
+)
 
 
 def _seance_publique(pk, maintenant):
@@ -57,9 +64,8 @@ def valider_selection(request, pk):
 def reserver_places(request, pk):
     maintenant = timezone.now()
     # Une réservation encore active est réaffichée plutôt que prolongée au rechargement.
-    en_cours = Reservation.objects.filter(
+    en_cours = reservations_provisoires_actives(maintenant).filter(
         pk=request.session.get("reservation_provisoire_id"),
-        statut=Reservation.Statut.EN_ATTENTE, date_expiration__gt=maintenant,
     ).first()
     if en_cours:
         return redirect("reservations:detail_reservation", pk=en_cours.pk)
@@ -92,12 +98,41 @@ def detail_reservation(request, pk):
         pk=pk if request.session.get("reservation_provisoire_id") == pk else None,
     )
     maintenant = timezone.now()
-    if reservation.statut == Reservation.Statut.EN_ATTENTE and reservation.date_expiration <= maintenant:
-        Reservation.objects.filter(pk=pk, statut=Reservation.Statut.EN_ATTENTE,
-                                   date_expiration__lte=maintenant).update(statut=Reservation.Statut.EXPIREE)
+    paiement = reservation.paiements.filter(statut=Paiement.Statut.EN_ATTENTE).order_by("-pk").first()
+    retour = request.GET.get("retour")
+    if (paiement and paiement.stripe_session_id and paiement.date_expiration
+            and (retour in ("succes", "annulation", "verification")
+                 or reservation.date_expiration <= maintenant)):
+        try:
+            actualiser_paiement(paiement)
+        except (StripeError, ImproperlyConfigured, ValidationError):
+            messages.error(request, "La vérification du paiement est momentanément indisponible. Actualisez la réservation.")
         reservation.refresh_from_db()
+        paiement.refresh_from_db()
+        if paiement.statut != Paiement.Statut.EN_ATTENTE:
+            paiement = None
+    if reservation.statut == Reservation.Statut.EN_ATTENTE and reservation.date_expiration <= maintenant:
+        reservations_a_expirer(maintenant).filter(pk=pk).update(statut=Reservation.Statut.EXPIREE)
+        reservation.refresh_from_db()
+    active = reservation.statut == Reservation.Statut.EN_ATTENTE and reservation.date_expiration > maintenant
+    seance = reservation.seance
+    paiement_possible = (
+        reservation.statut == Reservation.Statut.EN_ATTENTE
+        and seance.statut == Seance.Statut.PROGRAMMEE and seance.debut > maintenant
+        and seance.film.actif and seance.salle.active
+        and (paiement is not None or (
+            active and seance.debut >= maintenant + DUREE_PAIEMENT_CHECKOUT
+            and reservation.montant_total > 0
+        ))
+    )
     return render(request, "reservations/detail_reservation.html", {
         "reservation": reservation,
-        "active": reservation.statut == Reservation.Statut.EN_ATTENTE and reservation.date_expiration > maintenant,
+        "active": active,
+        "paiement_possible": paiement_possible,
+        "paiement_deja_demarre": paiement is not None,
+        "retour_annulation": paiement is not None and retour == "annulation",
+        "retour_paiement": paiement is not None and retour in ("succes", "verification"),
         "secondes_restantes": max(0, ceil((reservation.date_expiration - maintenant).total_seconds())),
+        "verification_paiement": (reservation.statut == Reservation.Statut.EN_ATTENTE
+                                 and reservation.date_expiration <= maintenant),
     })

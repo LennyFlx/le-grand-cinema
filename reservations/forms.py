@@ -37,6 +37,7 @@ class ReservationProvisoireForm(SelectionPlacesForm):
         label="Adresse email", max_length=254,
         widget=forms.EmailInput(attrs={
             "autocomplete": "email",
-            "class": "mt-2 min-h-11 w-full rounded-md border border-zinc-300 px-3 py-2",
+            "aria-describedby": "selection-email-aide",
+            "class": "mt-2 min-h-11 w-full rounded-md border border-zinc-300 px-3 py-2 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-red-700",
         }),
     )
