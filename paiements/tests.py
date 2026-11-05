@@ -7,6 +7,7 @@ from django.core.exceptions import ImproperlyConfigured
 from django.test import SimpleTestCase, TestCase, override_settings
 from django.utils import timezone
 from stripe import APIConnectionError
+from stripe.params.checkout import SessionCreateParams
 
 from cinema.models import Film, Salle, Seance
 from reservations.models import Reservation
@@ -73,7 +74,7 @@ class SessionCheckoutTests(SimpleTestCase):
                 appel = client_stripe.return_value.v1.checkout.sessions.create
                 donnees = appel.call_args.args[0]
                 self.assertEqual(donnees["mode"], "payment")
-                self.assertEqual(donnees["payment_method_types"], ["card"])
+                self.assertEqual(donnees["allowed_payment_method_types"], ["card"])
                 ligne = donnees["line_items"][0]
                 self.assertEqual(ligne["price_data"]["unit_amount"], centimes)
                 self.assertEqual(ligne["price_data"]["currency"], "eur")
@@ -108,3 +109,9 @@ class SessionCheckoutTests(SimpleTestCase):
         appel.side_effect = APIConnectionError("Connexion interrompue")
         with self.assertRaises(APIConnectionError):
             creer_session_checkout(self.reservation, **self.parametres)
+
+    @patch("paiements.services.StripeClient")
+    def test_parametres_compatibles_avec_version_sdk_installee(self, client_stripe):
+        creer_session_checkout(self.reservation, **self.parametres)
+        parametres = client_stripe.return_value.v1.checkout.sessions.create.call_args.args[0]
+        self.assertLessEqual(set(parametres), set(SessionCreateParams.__annotations__))

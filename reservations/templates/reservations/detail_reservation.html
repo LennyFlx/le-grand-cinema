@@ -6,6 +6,9 @@
 {% block content %}
 <section class="mx-auto max-w-2xl rounded-lg border border-zinc-200 border-t-4 border-t-red-700 bg-white p-6" aria-labelledby="reservation-titre">
     <h1 id="reservation-titre" class="text-2xl font-bold">{% if active %}Vos places sont temporairement réservées{% else %}Réservation {{ reservation.get_statut_display|lower }}{% endif %}</h1>
+    {% for message in messages %}
+        <p class="mt-4 text-red-800" role="alert">{{ message }}</p>
+    {% endfor %}
     <p class="mt-4 font-semibold">{{ reservation.seance.film.titre }}</p>
     <p class="mt-2 text-zinc-600">{{ reservation.seance.debut|date:"l d F Y à H:i" }} · {{ reservation.seance.salle.nom }}</p>
     <ul class="my-6 flex flex-wrap gap-2" aria-label="Places de la réservation">
@@ -21,6 +24,27 @@
         <p class="mt-6 text-zinc-600" role="status">Vérification du paiement en cours. Vos places restent réservées pendant cette vérification.</p>
     {% elif reservation.statut == 'expiree' %}
         <p class="mt-6 text-red-800" role="status">Le délai est écoulé. Vos places ne sont plus bloquées par cette réservation.</p>
+    {% endif %}
+    {% if reservation.statut == 'confirmee' %}
+        <p class="mt-6 font-semibold" role="status">Votre paiement est confirmé et votre réservation est enregistrée.</p>
+    {% elif paiement_possible %}
+        {% if retour_annulation %}
+            <p class="mt-6 text-zinc-600" role="status">Le paiement n’a pas été finalisé. Vous pouvez le reprendre.</p>
+        {% elif retour_paiement %}
+            <p class="mt-6 text-zinc-600" role="status">La confirmation du paiement est en cours.</p>
+        {% endif %}
+        {% if not paiement_deja_demarre %}
+            <p class="mt-4 text-sm text-zinc-600">Vous disposerez de 31 minutes pour payer à partir du premier clic sur « Payer ».</p>
+        {% endif %}
+        <form method="post" action="{% url 'paiements:payer_reservation' reservation.pk %}" class="mt-6">
+            {% csrf_token %}
+            <button type="submit" class="inline-flex min-h-11 cursor-pointer items-center justify-center rounded-md bg-yellow-400 px-5 py-3 font-semibold text-zinc-950 hover:bg-yellow-300 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-yellow-400">{% if paiement_deja_demarre %}Reprendre le paiement{% else %}Payer {{ reservation.montant_total }} €{% endif %}</button>
+        </form>
+    {% elif active %}
+        <p class="mt-6 text-red-800" role="status">Le paiement en ligne n’est plus disponible pour cette séance. Il ferme 31 minutes avant son début.</p>
+    {% endif %}
+    {% if verification_paiement or retour_paiement %}
+        <a href="{% url 'reservations:detail_reservation' reservation.pk %}?retour=verification" class="mt-6 inline-flex min-h-11 items-center rounded-md border border-zinc-300 px-5 py-3 font-semibold hover:bg-zinc-50">Actualiser la réservation</a>
     {% endif %}
     <a href="{% url 'cinema:films' %}" class="mt-6 inline-flex min-h-11 items-center rounded-md border border-zinc-300 px-5 py-3 font-semibold hover:bg-zinc-50">Retour à la programmation</a>
 </section>
