@@ -33,7 +33,7 @@ class ParcoursReservationProvisoireTests(TestCase):
         response = self.client.post(reverse("reservations:valider_selection", args=[self.seance.pk]), {"places": [self.place.pk]})
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, 'name="email"')
-        self.assertContains(response, "Bloquer mes places")
+        self.assertContains(response, "Confirmer ma réservation")
         self.assertFalse(Reservation.objects.exists())
 
     def test_blocage_redirection_page_privee_et_actualisation_sans_prolongation(self):
