@@ -13,6 +13,19 @@
     <p>{{ places|length }} place{{ places|length|pluralize }} × {{ seance.prix }} €</p>
     <p class="mt-2 text-xl font-bold">Total : {{ total }} €</p>
     <p class="mt-6 text-sm text-zinc-600">Les places sont disponibles au moment de cette vérification. Elles ne sont pas encore réservées.</p>
+    <form method="post" action="{% url 'reservations:reserver_places' seance.pk %}" class="mt-6">
+        {% csrf_token %}
+        {{ formulaire.places }}
+        {% if formulaire.errors %}
+            <div role="alert" class="mb-4 text-red-800">
+                {% for erreurs in formulaire.errors.values %}{% for erreur in erreurs %}<p>{{ erreur }}</p>{% endfor %}{% endfor %}
+            </div>
+        {% endif %}
+        <label for="{{ formulaire.email.id_for_label }}" class="block font-semibold">{{ formulaire.email.label }}</label>
+        {{ formulaire.email }}
+        <p class="mt-2 text-sm text-zinc-600">Vos places seront bloquées pendant 15 minutes maximum, jusqu’au début de la séance.</p>
+        <button type="submit" class="mt-4 min-h-11 rounded-md bg-yellow-400 px-5 py-3 font-semibold text-zinc-950 hover:bg-yellow-300">Bloquer mes places</button>
+    </form>
     <a href="{% url 'cinema:detail_seance' seance.pk %}" class="mt-6 inline-flex min-h-11 items-center rounded-md bg-yellow-400 px-5 py-3 font-semibold text-zinc-950 hover:bg-yellow-300">Revenir au plan</a>
 </section>
 {% endblock %}

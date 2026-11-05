@@ -1,0 +1,26 @@
+{% extends "cinema/base.html" %}
+{% load static %}
+
+{% block title %}Votre réservation — Le Grand Cinéma{% endblock %}
+
+{% block content %}
+<section class="mx-auto max-w-2xl rounded-lg border border-zinc-200 border-t-4 border-t-red-700 bg-white p-6" aria-labelledby="reservation-titre">
+    <h1 id="reservation-titre" class="text-2xl font-bold">{% if active %}Vos places sont temporairement réservées{% else %}Réservation {{ reservation.get_statut_display|lower }}{% endif %}</h1>
+    <p class="mt-4 font-semibold">{{ reservation.seance.film.titre }}</p>
+    <p class="mt-2 text-zinc-600">{{ reservation.seance.debut|date:"l d F Y à H:i" }} · {{ reservation.seance.salle.nom }}</p>
+    <ul class="my-6 flex flex-wrap gap-2" aria-label="Places de la réservation">
+        {% for association in reservation.places.all %}<li class="rounded-md bg-yellow-100 px-3 py-2 font-semibold">{{ association.place.rangee }}{{ association.place.numero }}</li>{% endfor %}
+    </ul>
+    <p class="text-xl font-bold">Total : {{ reservation.montant_total }} €</p>
+    <p class="mt-2 text-sm text-zinc-600">Adresse email : {{ reservation.email }}</p>
+    {% if active %}
+        <p class="mt-6 font-semibold">Vos places sont bloquées jusqu’à <time datetime="{{ reservation.date_expiration|date:'c' }}">{{ reservation.date_expiration|date:"H:i:s" }}</time>.</p>
+        <p class="mt-2 text-red-800">Temps restant : <span data-compte-rebours data-secondes="{{ secondes_restantes }}">{{ secondes_restantes }} secondes</span></p>
+        <p class="mt-4 text-sm text-zinc-600">Sans confirmation avant cette échéance, les places sont automatiquement libérées. Actualiser cette page ne prolonge pas le délai.</p>
+    {% elif reservation.statut == 'expiree' %}
+        <p class="mt-6 text-red-800" role="status">Le délai est écoulé. Vos places ne sont plus bloquées par cette réservation.</p>
+    {% endif %}
+    <a href="{% url 'cinema:films' %}" class="mt-6 inline-flex min-h-11 items-center rounded-md border border-zinc-300 px-5 py-3 font-semibold hover:bg-zinc-50">Retour à la programmation</a>
+</section>
+{% if active %}<script src="{% static 'reservations/js/compte_rebours.js' %}" defer></script>{% endif %}
+{% endblock %}

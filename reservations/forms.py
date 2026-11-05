@@ -30,3 +30,13 @@ class SelectionPlacesForm(forms.Form):
             raise forms.ValidationError("Ces places ne sont plus disponibles : %(places)s. Modifiez votre sélection.",
                                         params={"places": ", ".join(indisponibles)})
         return places
+
+
+class ReservationProvisoireForm(SelectionPlacesForm):
+    email = forms.EmailField(
+        label="Adresse email", max_length=254,
+        widget=forms.EmailInput(attrs={
+            "autocomplete": "email",
+            "class": "mt-2 min-h-11 w-full rounded-md border border-zinc-300 px-3 py-2",
+        }),
+    )
