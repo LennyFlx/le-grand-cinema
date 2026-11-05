@@ -8,6 +8,7 @@ from django.db.models import Exists, OuterRef, Q
 from django.utils import timezone
 
 from cinema.models import Salle, Seance
+from paiements.models import Paiement
 
 from .models import Billet, Reservation, ReservationPlace
 
@@ -26,16 +27,29 @@ def annuler_reservations_seance(seance):
     ).update(statut=Billet.Statut.ANNULE)
 
 
+def reservations_provisoires_actives(maintenant=None):
+    """Inclut les paiements en attente tant que Stripe ne les a pas clôturés."""
+    maintenant = maintenant if maintenant is not None else timezone.now()
+    return Reservation.objects.filter(statut=Reservation.Statut.EN_ATTENTE).filter(
+        Q(date_expiration__gt=maintenant) | Q(paiements__statut=Paiement.Statut.EN_ATTENTE),
+    ).distinct()
+
+
+def reservations_a_expirer(maintenant=None):
+    """Sélectionne les réservations échues sans transaction encore en attente."""
+    maintenant = maintenant if maintenant is not None else timezone.now()
+    return Reservation.objects.filter(
+        statut=Reservation.Statut.EN_ATTENTE, date_expiration__lte=maintenant,
+    ).exclude(paiements__statut=Paiement.Statut.EN_ATTENTE)
+
+
 def _places_avec_occupation(seance, maintenant=None):
     maintenant = maintenant if maintenant is not None else timezone.now()
     occupations = ReservationPlace.objects.filter(
         place_id=OuterRef("pk"), reservation__seance=seance,
     ).filter(
         Q(reservation__statut=Reservation.Statut.CONFIRMEE)
-        | Q(
-            reservation__statut=Reservation.Statut.EN_ATTENTE,
-            reservation__date_expiration__gt=maintenant,
-        )
+        | Q(reservation_id__in=reservations_provisoires_actives(maintenant))
     )
     return seance.salle.places.annotate(occupee=Exists(occupations))
 
@@ -71,14 +85,12 @@ def obtenir_disponibilites(seance, maintenant=None):
         "complet": total > 0 and disponibles == 0,
     }
 
-DUREE_RESERVATION_PROVISOIRE = timedelta(minutes=15)
+DUREE_RESERVATION_PROVISOIRE = timedelta(minutes=30)
 
 
 def expirer_reservations():
-    """Actualise les statuts ; les disponibilités tiennent déjà compte de l'échéance."""
-    return Reservation.objects.filter(
-        statut=Reservation.Statut.EN_ATTENTE, date_expiration__lte=timezone.now(),
-    ).update(statut=Reservation.Statut.EXPIREE)
+    """Actualise les statuts sans libérer une transaction encore en attente."""
+    return reservations_a_expirer().update(statut=Reservation.Statut.EXPIREE)
 
 
 @transaction.atomic
@@ -118,9 +130,7 @@ def creer_reservation_provisoire(seance, identifiants_places, email):
         montant_total=actuelle.prix * len(places),
     )
     reservation.full_clean()
-    Reservation.objects.filter(
-        seance=actuelle, statut=Reservation.Statut.EN_ATTENTE, date_expiration__lte=maintenant,
-    ).update(statut=Reservation.Statut.EXPIREE)
+    reservations_a_expirer(maintenant).filter(seance=actuelle).update(statut=Reservation.Statut.EXPIREE)
     reservation.save()
     ReservationPlace.objects.bulk_create([
         ReservationPlace(reservation=reservation, place=place, prix_unitaire=actuelle.prix)

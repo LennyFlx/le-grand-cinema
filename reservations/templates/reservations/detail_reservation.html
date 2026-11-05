@@ -16,7 +16,9 @@
     {% if active %}
         <p class="mt-6 font-semibold">Vos places sont bloquées jusqu’à <time datetime="{{ reservation.date_expiration|date:'c' }}">{{ reservation.date_expiration|date:"H:i:s" }}</time>.</p>
         <p class="mt-2 text-red-800">Temps restant : <span data-compte-rebours data-secondes="{{ secondes_restantes }}">{{ secondes_restantes }} secondes</span></p>
-        <p class="mt-4 text-sm text-zinc-600">Sans confirmation avant cette échéance, les places sont automatiquement libérées. Actualiser cette page ne prolonge pas le délai.</p>
+        <p class="mt-4 text-sm text-zinc-600">À cette échéance, les places sont libérées si aucun paiement n’est en cours de vérification. Actualiser cette page ne prolonge pas le délai.</p>
+    {% elif verification_paiement %}
+        <p class="mt-6 text-zinc-600" role="status">Vérification du paiement en cours. Vos places restent réservées pendant cette vérification.</p>
     {% elif reservation.statut == 'expiree' %}
         <p class="mt-6 text-red-800" role="status">Le délai est écoulé. Vos places ne sont plus bloquées par cette réservation.</p>
     {% endif %}

@@ -43,7 +43,7 @@ class ReservationProvisoireTests(DonneesReservationProvisoire, TestCase):
         reservation = self.reserver([place.pk for place in self.places[:8]])
         self.assertEqual(reservation.statut, Reservation.Statut.EN_ATTENTE)
         self.assertEqual(reservation.montant_total, Decimal("98.80"))
-        self.assertEqual(reservation.date_expiration, self.maintenant + timedelta(minutes=15))
+        self.assertEqual(reservation.date_expiration, self.maintenant + timedelta(minutes=30))
         self.assertEqual(reservation.places.count(), 8)
         self.assertEqual(set(reservation.places.values_list("prix_unitaire", flat=True)), {Decimal("12.35")})
         self.assertEqual(compter_places_disponibles(self.seance, self.maintenant), 2)

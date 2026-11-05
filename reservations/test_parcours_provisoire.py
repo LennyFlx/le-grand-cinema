@@ -47,7 +47,7 @@ class ParcoursReservationProvisoireTests(TestCase):
         for _ in range(2):
             page = self.client.get(response.url)
             self.assertContains(page, "Vos places sont temporairement réservées")
-            self.assertEqual(page.context["secondes_restantes"], 900)
+            self.assertEqual(page.context["secondes_restantes"], 1800)
             self.assertIn("no-store", page["Cache-Control"])
         reservation.refresh_from_db()
         self.assertEqual(reservation.date_expiration, expiration)

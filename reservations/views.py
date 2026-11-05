@@ -10,7 +10,10 @@ from cinema.models import Seance
 from cinema.plan_salle import organiser_plan
 from .forms import ReservationProvisoireForm, SelectionPlacesForm
 from .models import Reservation
-from .services import creer_reservation_provisoire, obtenir_disponibilites
+from .services import (
+    creer_reservation_provisoire, obtenir_disponibilites,
+    reservations_a_expirer, reservations_provisoires_actives,
+)
 
 
 def _seance_publique(pk, maintenant):
@@ -57,9 +60,8 @@ def valider_selection(request, pk):
 def reserver_places(request, pk):
     maintenant = timezone.now()
     # Une réservation encore active est réaffichée plutôt que prolongée au rechargement.
-    en_cours = Reservation.objects.filter(
+    en_cours = reservations_provisoires_actives(maintenant).filter(
         pk=request.session.get("reservation_provisoire_id"),
-        statut=Reservation.Statut.EN_ATTENTE, date_expiration__gt=maintenant,
     ).first()
     if en_cours:
         return redirect("reservations:detail_reservation", pk=en_cours.pk)
@@ -93,11 +95,12 @@ def detail_reservation(request, pk):
     )
     maintenant = timezone.now()
     if reservation.statut == Reservation.Statut.EN_ATTENTE and reservation.date_expiration <= maintenant:
-        Reservation.objects.filter(pk=pk, statut=Reservation.Statut.EN_ATTENTE,
-                                   date_expiration__lte=maintenant).update(statut=Reservation.Statut.EXPIREE)
+        reservations_a_expirer(maintenant).filter(pk=pk).update(statut=Reservation.Statut.EXPIREE)
         reservation.refresh_from_db()
     return render(request, "reservations/detail_reservation.html", {
         "reservation": reservation,
         "active": reservation.statut == Reservation.Statut.EN_ATTENTE and reservation.date_expiration > maintenant,
         "secondes_restantes": max(0, ceil((reservation.date_expiration - maintenant).total_seconds())),
+        "verification_paiement": (reservation.statut == Reservation.Statut.EN_ATTENTE
+                                 and reservation.date_expiration <= maintenant),
     })
