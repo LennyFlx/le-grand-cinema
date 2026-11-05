@@ -19,7 +19,10 @@
                 <img src="{% static 'cinema/images/lgc_logo.svg' %}" alt="" width="50" height="50" class="size-[30px] shrink-0 object-contain">
                 <span class="text-lg font-semibold tracking-tight whitespace-nowrap sm:text-xl"><span class="text-red-400">L</span>e<span class="text-red-400">G</span>rand<span class="text-red-400">C</span>inema</span>
             </a>
-            <nav aria-label="Navigation principale">
+            <nav aria-label="Navigation principale" class="flex flex-wrap items-center gap-3">
+                {% if reservation_a_reprendre %}
+                    <a class="inline-flex min-h-11 items-center justify-center rounded-md border border-yellow-400 px-4 py-2.5 text-sm font-semibold text-yellow-300 hover:bg-zinc-800 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-yellow-400" href="{% url 'reservations:detail_reservation' reservation_a_reprendre.pk %}">Reprendre ma réservation</a>
+                {% endif %}
                 <a class="inline-flex min-h-11 items-center justify-center rounded-md bg-yellow-400 px-5 py-2.5 text-sm font-semibold text-zinc-950 hover:bg-yellow-300 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-yellow-400" href="{% url 'cinema:films' %}#films">À l'affiche</a>
             </nav>
         </div>

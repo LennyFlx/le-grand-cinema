@@ -106,3 +106,35 @@ class ParcoursReservationProvisoireTests(TestCase):
         client = Client(enforce_csrf_checks=True)
         self.assertEqual(client.post(self.url, self.donnees).status_code, 403)
         self.assertFalse(Reservation.objects.exists())
+
+    def test_lien_header_permet_reprise_depuis_programmation_meme_session(self):
+        accueil = reverse("cinema:films")
+        self.assertNotContains(self.client.get(accueil), "Reprendre ma réservation")
+        creation = self.client.post(self.url, self.donnees)
+        reservation = Reservation.objects.get()
+        expiration = reservation.date_expiration
+        for url in (accueil, reverse("cinema:detail_film", args=[self.seance.film_id])):
+            page = self.client.get(url)
+            self.assertContains(page, "Reprendre ma réservation")
+            self.assertContains(page, f'href="{creation.url}"')
+        self.assertNotContains(Client().get(accueil), "Reprendre ma réservation")
+        self.assertContains(self.client.get(creation.url), "Vos places sont temporairement réservées")
+        reservation.refresh_from_db()
+        self.assertEqual(reservation.date_expiration, expiration)
+
+    def test_lien_header_absent_pour_reservation_expiree_annulee_ou_confirmee(self):
+        self.client.post(self.url, self.donnees)
+        reservation = Reservation.objects.get()
+        accueil = reverse("cinema:films")
+        with patch("reservations.context_processors.timezone.now", return_value=reservation.date_expiration):
+            self.assertNotContains(self.client.get(accueil), "Reprendre ma réservation")
+        for statut in (Reservation.Statut.EXPIREE, Reservation.Statut.ANNULEE, Reservation.Statut.CONFIRMEE):
+            Reservation.objects.filter(pk=reservation.pk).update(statut=statut)
+            with self.subTest(statut=statut):
+                self.assertNotContains(self.client.get(accueil), "Reprendre ma réservation")
+
+    def test_reference_session_supprimee_ne_provoque_pas_erreur_header(self):
+        session = self.client.session
+        session["reservation_provisoire_id"] = 99999999
+        session.save()
+        self.assertNotContains(self.client.get(reverse("cinema:films")), "Reprendre ma réservation")
