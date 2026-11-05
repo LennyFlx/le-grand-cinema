@@ -52,12 +52,12 @@ def obtenir_disponibilites(seance, maintenant=None):
         else:
             total += 1
             if place.occupee:
-                statut, libelle = "occupee", "Indisponible"
+                statut, libelle = "occupee", "Réservée"
             else:
                 statut, libelle = "disponible", "Disponible"
                 disponibles += 1
         rangees.setdefault(place.rangee, []).append({
-            "numero": place.numero, "statut": statut, "libelle": libelle,
+            "id": place.pk, "numero": place.numero, "statut": statut, "libelle": libelle,
         })
     return {
         "rangees": [{"nom": nom, "places": places} for nom, places in rangees.items()],
