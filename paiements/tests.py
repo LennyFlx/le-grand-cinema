@@ -1,13 +1,18 @@
 from datetime import timedelta
+from decimal import Decimal
+from types import SimpleNamespace
+from unittest.mock import patch
 
-from django.test import TestCase
+from django.core.exceptions import ImproperlyConfigured
+from django.test import SimpleTestCase, TestCase, override_settings
 from django.utils import timezone
+from stripe import APIConnectionError
 
 from cinema.models import Film, Salle, Seance
 from reservations.models import Reservation
 
 from .models import Paiement
-from .services import compter_paiements_a_traiter
+from .services import compter_paiements_a_traiter, creer_session_checkout
 
 
 class SuiviPaiementsTests(TestCase):
@@ -44,3 +49,62 @@ class SuiviPaiementsTests(TestCase):
             reservation=reservation, stripe_session_id="session-autre", montant=10, statut=Paiement.Statut.REUSSI,
         )
         self.assertEqual(compter_paiements_a_traiter(self.seance), 0)
+
+
+@override_settings(STRIPE_SECRET_KEY="sk_test_exemple")
+class SessionCheckoutTests(SimpleTestCase):
+    def setUp(self):
+        self.reservation = SimpleNamespace(
+            pk=42, email="spectateur@example.com", montant_total=Decimal("24.60"),
+        )
+        self.parametres = {
+            "date_expiration": timezone.now() + timedelta(minutes=31),
+            "url_succes": "http://testserver/reservations/42/",
+            "url_annulation": "http://testserver/reservations/42/",
+            "cle_idempotence": "paiement-42",
+        }
+
+    @patch("paiements.services.StripeClient")
+    def test_montant_exact_en_centimes_et_paiement_par_carte_en_euros(self, client_stripe):
+        for montant, centimes in ((Decimal("24.60"), 2460), (Decimal("10.01"), 1001)):
+            with self.subTest(montant=montant):
+                self.reservation.montant_total = montant
+                session = creer_session_checkout(self.reservation, **self.parametres)
+                appel = client_stripe.return_value.v1.checkout.sessions.create
+                donnees = appel.call_args.args[0]
+                self.assertEqual(donnees["mode"], "payment")
+                self.assertEqual(donnees["payment_method_types"], ["card"])
+                ligne = donnees["line_items"][0]
+                self.assertEqual(ligne["price_data"]["unit_amount"], centimes)
+                self.assertEqual(ligne["price_data"]["currency"], "eur")
+                self.assertEqual(ligne["quantity"], 1)
+                self.assertEqual(donnees["metadata"]["reservation_id"], "42")
+                self.assertEqual(donnees["customer_email"], self.reservation.email)
+                self.assertIs(session, appel.return_value)
+
+    @patch("paiements.services.StripeClient")
+    def test_nouvelle_demande_conserve_echeance_et_cle_idempotence(self, client_stripe):
+        creer_session_checkout(self.reservation, **self.parametres)
+        creer_session_checkout(self.reservation, **self.parametres)
+        appels = client_stripe.return_value.v1.checkout.sessions.create.call_args_list
+        self.assertEqual(len(appels), 2)
+        self.assertEqual(appels[0], appels[1])
+        self.assertEqual(
+            appels[0].args[0]["expires_at"],
+            int(self.parametres["date_expiration"].timestamp()),
+        )
+        self.assertEqual(appels[0].kwargs["options"], {"idempotency_key": "paiement-42"})
+
+    @override_settings(STRIPE_SECRET_KEY="")
+    @patch("paiements.services.StripeClient")
+    def test_absence_de_cle_refusee_avant_tout_appel_stripe(self, client_stripe):
+        with self.assertRaisesMessage(ImproperlyConfigured, "clé secrète Stripe"):
+            creer_session_checkout(self.reservation, **self.parametres)
+        client_stripe.assert_not_called()
+
+    @patch("paiements.services.StripeClient")
+    def test_erreur_reseau_remontee_a_appelant(self, client_stripe):
+        appel = client_stripe.return_value.v1.checkout.sessions.create
+        appel.side_effect = APIConnectionError("Connexion interrompue")
+        with self.assertRaises(APIConnectionError):
+            creer_session_checkout(self.reservation, **self.parametres)
