@@ -5,12 +5,28 @@
     const sieges = Array.from(page.querySelectorAll('[data-place]'));
     const prixCentimes = Math.round(Number(page.dataset.prix) * 100);
     const montant = new Intl.NumberFormat('fr-FR', {style: 'currency', currency: 'EUR'});
-    const selection = new Set();
+    const selection = new Set(sieges.filter(siege => siege.dataset.selectionnee === 'true'));
     const erreur = page.querySelector('[data-erreur]');
     const liste = page.querySelector('[data-places]');
 
     function actualiser() {
         const places = sieges.filter(siege => selection.has(siege));
+        const champs = page.querySelector('[data-champs-selection]');
+        champs.replaceChildren();
+        for (const siege of sieges) {
+            const choisie = selection.has(siege);
+            siege.setAttribute('aria-pressed', String(choisie));
+            siege.setAttribute('aria-label', `Place ${siege.dataset.place} : ${choisie ? 'Sélectionnée' : 'Disponible'}`);
+            siege.querySelector('[data-symbole]').textContent = choisie ? '✓' : '+';
+        }
+        for (const siege of places) {
+            const champ = document.createElement('input');
+            champ.type = 'hidden';
+            champ.name = 'places';
+            champ.value = siege.dataset.placeId;
+            champs.append(champ);
+        }
+        page.querySelector('[data-continuer]').disabled = places.length === 0;
         liste.replaceChildren();
         if (!places.length) liste.textContent = 'Aucune place sélectionnée';
         for (const siege of places) {
@@ -36,10 +52,7 @@
         }
         if (selection.has(siege)) selection.delete(siege);
         else selection.add(siege);
-        const choisie = selection.has(siege);
-        siege.setAttribute('aria-pressed', String(choisie));
-        siege.setAttribute('aria-label', `Place ${siege.dataset.place} : ${choisie ? 'Sélectionnée' : 'Disponible'}`);
-        siege.querySelector('[data-symbole]').textContent = choisie ? '✓' : '+';
+
         erreur.textContent = '';
         actualiser();
     }
@@ -50,4 +63,5 @@
     }
     page.querySelector('[data-resume]').hidden = false;
     actualiser();
+    page.querySelector('[data-erreurs-serveur]')?.focus();
 })();

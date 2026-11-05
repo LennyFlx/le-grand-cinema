@@ -1,5 +1,6 @@
 @import "tailwindcss" source(none);
 @source "../../cinema/templates/cinema";
+@source "../../reservations/templates/reservations";
 
 @theme {
     --font-sans: "Poppins", ui-sans-serif, system-ui, sans-serif;
@@ -30,3 +31,7 @@
     .selection-film { display: block; margin-top: .75rem; font-size: .875rem; color: #52525b; }
     .selection-places { max-height: none; margin: 1.25rem 0; }
 }
+
+.selection-continuer:not(:disabled) { cursor: pointer; }
+.selection-continuer:not(:disabled):hover { background: #fde047; }
+.selection-continuer:focus-visible { outline: 2px solid #b91c1c; outline-offset: 3px; }
