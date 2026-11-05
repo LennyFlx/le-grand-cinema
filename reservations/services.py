@@ -1,8 +1,13 @@
 """Disponibilités des places et gestion des réservations et billets associés."""
 
+from datetime import timedelta
+
+from django.core.exceptions import ValidationError
 from django.db import transaction
 from django.db.models import Exists, OuterRef, Q
 from django.utils import timezone
+
+from cinema.models import Salle, Seance
 
 from .models import Billet, Reservation, ReservationPlace
 
@@ -65,3 +70,60 @@ def obtenir_disponibilites(seance, maintenant=None):
         "disponibles": disponibles,
         "complet": total > 0 and disponibles == 0,
     }
+
+DUREE_RESERVATION_PROVISOIRE = timedelta(minutes=15)
+
+
+def expirer_reservations():
+    """Actualise les statuts ; les disponibilités tiennent déjà compte de l'échéance."""
+    return Reservation.objects.filter(
+        statut=Reservation.Statut.EN_ATTENTE, date_expiration__lte=timezone.now(),
+    ).update(statut=Reservation.Statut.EXPIREE)
+
+
+@transaction.atomic
+def creer_reservation_provisoire(seance, identifiants_places, email):
+    """Revérifie et bloque les places en une transaction, sans paiement ni billet."""
+    identifiants = list(identifiants_places)
+    if not 1 <= len(identifiants) <= 8:
+        raise ValidationError("Sélectionnez entre 1 et 8 places par réservation.")
+    if any(type(pk) is not int or not 0 < pk < 2**63 for pk in identifiants):
+        raise ValidationError("La sélection contient un identifiant de place invalide.")
+    if len(set(identifiants)) != len(identifiants):
+        raise ValidationError("Une place ne peut être sélectionnée qu’une seule fois.")
+
+    # Même ordre de verrouillage que la modification et l'annulation d'une séance.
+    salle_id = Seance.objects.filter(pk=seance.pk).values_list("salle_id", flat=True).first()
+    if salle_id is None:
+        raise ValidationError("Cette séance n’est plus disponible.")
+    Salle.objects.select_for_update().get(pk=salle_id)
+    actuelle = (Seance.objects.select_for_update(of=("self",))
+                .select_related("film", "salle").get(pk=seance.pk))
+    # L'heure est prise après l'attente éventuelle des verrous.
+    maintenant = timezone.now()
+    if (actuelle.salle_id != salle_id or actuelle.statut != Seance.Statut.PROGRAMMEE
+            or actuelle.debut <= maintenant or not actuelle.film.actif or not actuelle.salle.active):
+        raise ValidationError("Cette séance n’est plus disponible.")
+    places = list(_places_avec_occupation(actuelle, maintenant)
+                  .filter(pk__in=identifiants).order_by("rangee", "numero"))
+    if len(places) != len(identifiants):
+        raise ValidationError("Une des places sélectionnées ne fait pas partie de cette salle.")
+    indisponibles = [f"{place.rangee}{place.numero}" for place in places if not place.active or place.occupee]
+    if indisponibles:
+        raise ValidationError("Ces places ne sont plus disponibles : %(places)s.",
+                              params={"places": ", ".join(indisponibles)})
+    reservation = Reservation(
+        seance=actuelle, email=(email or "").strip(), statut=Reservation.Statut.EN_ATTENTE,
+        date_expiration=min(maintenant + DUREE_RESERVATION_PROVISOIRE, actuelle.debut),
+        montant_total=actuelle.prix * len(places),
+    )
+    reservation.full_clean()
+    Reservation.objects.filter(
+        seance=actuelle, statut=Reservation.Statut.EN_ATTENTE, date_expiration__lte=maintenant,
+    ).update(statut=Reservation.Statut.EXPIREE)
+    reservation.save()
+    ReservationPlace.objects.bulk_create([
+        ReservationPlace(reservation=reservation, place=place, prix_unitaire=actuelle.prix)
+        for place in places
+    ])
+    return reservation
