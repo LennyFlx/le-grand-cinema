@@ -1,4 +1,4 @@
-"""Envoi des liens de billets après confirmation et suivi des relances."""
+"""Envoi des billets PDF et de leur lien après confirmation, avec suivi des relances."""
 
 import logging
 from datetime import timedelta
@@ -13,6 +13,7 @@ from django.template.loader import render_to_string
 from django.utils import timezone
 
 from .models import EnvoiBillets, Reservation
+from .pdf import generer_pdf_billets
 from .services import creer_url_billets, obtenir_billets_valides
 
 
@@ -98,6 +99,11 @@ def envoyer_billets(reservation_id, *, renvoi=False):
         )
         message.attach_alternative(
             render_to_string("reservations/emails/billets.html", contexte), "text/html",
+        )
+        message.attach(
+            f"billets-reservation-{reservation.pk}.pdf",
+            generer_pdf_billets(reservation, billets),
+            "application/pdf",
         )
         if message.send(fail_silently=False) != 1:
             raise RuntimeError("Le service mail n’a pas accepté le message.")

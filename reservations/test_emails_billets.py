@@ -2,7 +2,7 @@ from concurrent.futures import ThreadPoolExecutor
 from contextlib import redirect_stdout
 from datetime import timedelta
 from decimal import Decimal
-from io import StringIO
+from io import BytesIO, StringIO
 from smtplib import SMTPException
 from threading import Barrier
 from unittest.mock import patch
@@ -14,6 +14,7 @@ from django.db import close_old_connections, connection, transaction
 from django.test import Client, TestCase, TransactionTestCase, override_settings
 from django.urls import reverse
 from django.utils import timezone
+from pypdf import PdfReader
 
 from cinema.models import Film, Place, Salle, Seance
 from cinema.services import annuler_seance
@@ -91,6 +92,7 @@ class EnvoiEmailBilletsTests(TestCase):
         self.assertIn(self.reservation.seance.salle.nom, message.body)
         self.assertIn("Places : A1, A2", message.body)
         self.assertIn("24,70", message.body)
+        self.assertIn("Vos billets sont joints à cet email au format PDF.", message.body)
         self.assertEqual(len(message.alternatives), 1)
         self.assertEqual(message.alternatives[0].mimetype, "text/html")
         self.assertIn("&lt;séance spéciale&gt;", message.alternatives[0].content)
@@ -103,6 +105,71 @@ class EnvoiEmailBilletsTests(TestCase):
         self.assertEqual(envoi.statut, EnvoiBillets.Statut.ENVOYE)
         self.assertIsNotNone(envoi.date_envoi)
         self.assertIsNotNone(envoi.date_derniere_tentative)
+
+    def test_piece_jointe_pdf_contient_un_billet_par_place(self):
+        self.assertTrue(envoyer_billets(self.reservation.pk))
+
+        message = mail.outbox[0]
+        self.assertEqual(len(message.attachments), 1)
+        pieces = [
+            partie for partie in message.message().walk()
+            if partie.get_content_type() == "application/pdf"
+        ]
+        self.assertEqual(len(pieces), 1)
+        piece = pieces[0]
+        self.assertEqual(piece.get_filename(), f"billets-reservation-{self.reservation.pk}.pdf")
+        self.assertEqual(piece.get_content_disposition(), "attachment")
+        lecteur = PdfReader(BytesIO(piece.get_payload(decode=True)), strict=True)
+        self.assertEqual(len(lecteur.pages), 2)
+        billets = Billet.objects.select_related("reservation_place__place").order_by(
+            "reservation_place__place__numero",
+        )
+        for page, billet in zip(lecteur.pages, billets, strict=True):
+            texte = " ".join(page.extract_text().split())
+            self.assertIn(self.reservation.seance.film.titre, texte)
+            self.assertIn(self.reservation.seance.salle.nom, texte)
+            self.assertIn(f"Place A{billet.reservation_place.place.numero}", texte)
+            self.assertIn(str(billet.reference), texte)
+
+    def test_piece_jointe_exclut_billet_annule(self):
+        billet_annule = Billet.objects.order_by("pk").first()
+        Billet.objects.filter(pk=billet_annule.pk).update(statut=Billet.Statut.ANNULE)
+        billet_valide = Billet.objects.get(statut=Billet.Statut.VALIDE)
+
+        self.assertTrue(envoyer_billets(self.reservation.pk))
+
+        piece = mail.outbox[0].attachments[0]
+        lecteur = PdfReader(BytesIO(piece.content), strict=True)
+        self.assertEqual(len(lecteur.pages), 1)
+        texte = lecteur.pages[0].extract_text()
+        self.assertNotIn(str(billet_annule.reference), texte)
+        self.assertIn(str(billet_valide.reference), texte)
+        self.assertIn("Place A2", texte)
+
+    def test_echec_generation_pdf_conserve_paiement_et_permet_relance(self):
+        billets_initiaux = list(Billet.objects.order_by("pk").values())
+        with patch("reservations.emails.generer_pdf_billets", side_effect=RuntimeError("Export interrompu")):
+            with patch("reservations.emails.EmailMultiAlternatives.send") as envoi_message:
+                with self.assertLogs("reservations.emails", level="WARNING"):
+                    self.assertFalse(envoyer_billets(self.reservation.pk))
+
+        envoi_message.assert_not_called()
+        self.assertEqual(len(mail.outbox), 0)
+        envoi = EnvoiBillets.objects.get()
+        self.assertEqual(envoi.statut, EnvoiBillets.Statut.ECHOUE)
+        self.assertIsNone(envoi.date_envoi)
+        self.reservation.refresh_from_db()
+        self.assertEqual(self.reservation.statut, Reservation.Statut.CONFIRMEE)
+        self.assertEqual(self.reservation.paiements.get().statut, Paiement.Statut.REUSSI)
+        self.assertEqual(list(Billet.objects.order_by("pk").values()), billets_initiaux)
+
+        with patch("reservations.emails.timezone.now", return_value=envoi.date_derniere_tentative + timedelta(seconds=61)):
+            self.assertTrue(envoyer_billets(self.reservation.pk, renvoi=True))
+
+        self.assertEqual(len(mail.outbox), 1)
+        self.assertEqual(len(mail.outbox[0].attachments), 1)
+        self.assertEqual(EnvoiBillets.objects.get().statut, EnvoiBillets.Statut.ENVOYE)
+        self.assertEqual(list(Billet.objects.order_by("pk").values()), billets_initiaux)
 
     def test_envoi_differe_et_demande_conservee_en_base(self):
         with self.captureOnCommitCallbacks(execute=False) as callbacks:
@@ -187,6 +254,13 @@ class EnvoiEmailBilletsTests(TestCase):
 
         self.assertEqual(len(mail.outbox), 2)
         self.assertEqual(mail.outbox[0].body, mail.outbox[1].body)
+        for message in mail.outbox:
+            self.assertEqual(len(message.attachments), 1)
+            lecteur = PdfReader(BytesIO(message.attachments[0].content), strict=True)
+            self.assertEqual(len(lecteur.pages), 2)
+            texte = " ".join(page.extract_text() for page in lecteur.pages)
+            for billet in billets:
+                self.assertIn(billet["reference"], texte)
         self.assertEqual(list(Billet.objects.order_by("pk").values()), billets)
 
     def test_envoi_interrompu_peut_etre_repris_apres_delai(self):

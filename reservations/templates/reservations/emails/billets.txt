@@ -8,7 +8,9 @@ Salle : {{ reservation.seance.salle.nom }}
 Places : {% for billet in billets %}{{ billet.reservation_place.place.rangee }}{{ billet.reservation_place.place.numero }}{% if not forloop.last %}, {% endif %}{% endfor %}
 Montant réglé : {{ reservation.montant_total }} €
 
-Consultez vos billets et téléchargez leur PDF :
+Vos billets sont joints à cet email au format PDF.
+
+Vous pouvez aussi consulter vos billets et télécharger leur PDF :
 {{ url_billets }}
 
 Conservez ce lien personnel pour retrouver vos billets sans créer de compte.
