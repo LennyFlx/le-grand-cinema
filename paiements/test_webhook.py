@@ -4,6 +4,7 @@ import json
 import time
 from datetime import timedelta
 from decimal import Decimal
+from unittest.mock import patch
 
 from django.core.exceptions import ValidationError
 from django.test import Client, TestCase, override_settings
@@ -11,7 +12,8 @@ from django.urls import reverse
 from django.utils import timezone
 
 from cinema.models import Film, Place, Salle, Seance
-from reservations.models import Billet, Reservation, ReservationPlace
+from cinema.services import annuler_seance
+from reservations.models import Billet, EnvoiBillets, Reservation, ReservationPlace
 from reservations.services import (
     compter_places_disponibles, creer_reservation_provisoire, expirer_reservations,
 )
@@ -85,6 +87,8 @@ class WebhookStripeTests(TestCase):
         self.reservation.refresh_from_db()
         self.assertEqual(self.paiement.statut, Paiement.Statut.EN_ATTENTE)
         self.assertEqual(self.reservation.statut, Reservation.Statut.EN_ATTENTE)
+        self.assertFalse(Billet.objects.exists())
+        self.assertFalse(EnvoiBillets.objects.exists())
 
     def test_paiement_signe_confirme_sans_session_navigateur_ni_csrf(self):
         self.assertEqual(self.envoyer().status_code, 200)
@@ -95,12 +99,16 @@ class WebhookStripeTests(TestCase):
         self.assertIsNotNone(self.paiement.date_confirmation)
         self.assertEqual(self.reservation.statut, Reservation.Statut.CONFIRMEE)
         self.assertEqual(compter_places_disponibles(self.seance), 0)
-        self.assertFalse(Billet.objects.exists())
+        billet = Billet.objects.get()
+        self.assertEqual(billet.reservation_place.reservation_id, self.reservation.pk)
+        self.assertEqual(billet.reservation_place.place_id, self.place.pk)
+        self.assertEqual(billet.statut, Billet.Statut.VALIDE)
 
     def test_evenements_repetes_ne_reconfirment_pas_le_paiement(self):
         self.envoyer()
         self.paiement.refresh_from_db()
         date_confirmation = self.paiement.date_confirmation
+        billet_initial = Billet.objects.values("pk", "reference", "date_emission", "statut").get()
         self.assertEqual(self.envoyer().status_code, 200)
         self.paiement.refresh_from_db()
         self.assertEqual(self.paiement.date_confirmation, date_confirmation)
@@ -109,6 +117,10 @@ class WebhookStripeTests(TestCase):
         self.assertEqual(self.envoyer("checkout.session.expired").status_code, 200)
         self.paiement.refresh_from_db()
         self.assertEqual(self.paiement.statut, Paiement.Statut.REUSSI)
+        self.assertEqual(
+            Billet.objects.values("pk", "reference", "date_emission", "statut").get(),
+            billet_initial,
+        )
 
     def test_signature_absente_ou_fausse_et_json_invalide_refuses(self):
         for signature in ("", "t=0,v1=faux"):
@@ -149,6 +161,7 @@ class WebhookStripeTests(TestCase):
         self.assertEqual(self.paiement.statut, Paiement.Statut.ECHOUE)
         self.assertEqual(self.reservation.statut, Reservation.Statut.EXPIREE)
         self.assertEqual(compter_places_disponibles(self.seance), 1)
+        self.assertFalse(Billet.objects.exists())
 
     def test_retard_webhook_ne_libere_pas_les_places_avant_verification(self):
         Reservation.objects.filter(pk=self.reservation.pk).update(
@@ -183,6 +196,7 @@ class WebhookStripeTests(TestCase):
         self.envoyer("checkout.session.expired")
         self.reservation.refresh_from_db()
         self.assertEqual(self.reservation.statut, Reservation.Statut.EN_ATTENTE)
+        self.assertFalse(Billet.objects.exists())
         self.assertEqual(compter_places_disponibles(self.seance), 0)
 
     def test_reservation_annulee_ou_expiree_jamais_reactivee(self):
@@ -195,6 +209,62 @@ class WebhookStripeTests(TestCase):
                 self.paiement.refresh_from_db()
                 self.assertEqual(self.reservation.statut, statut)
                 self.assertEqual(self.paiement.statut, Paiement.Statut.REUSSI)
+                self.assertFalse(Billet.objects.exists())
+
+    def test_paiement_tardif_apres_annulation_seance_ne_genere_pas_billet(self):
+        annuler_seance(self.seance)
+
+        self.assertEqual(self.envoyer().status_code, 200)
+
+        self.reservation.refresh_from_db()
+        self.paiement.refresh_from_db()
+        self.assertEqual(self.reservation.statut, Reservation.Statut.ANNULEE)
+        self.assertEqual(self.paiement.statut, Paiement.Statut.REUSSI)
+        self.assertFalse(Billet.objects.exists())
+
+    def test_webhook_repete_apres_annulation_ne_reactive_pas_billet(self):
+        self.assertEqual(self.envoyer().status_code, 200)
+        billet = Billet.objects.get()
+        reference = billet.reference
+        annuler_seance(self.seance)
+
+        self.assertEqual(self.envoyer().status_code, 200)
+
+        billet.refresh_from_db()
+        self.assertEqual(Billet.objects.count(), 1)
+        self.assertEqual(billet.reference, reference)
+        self.assertEqual(billet.statut, Billet.Statut.ANNULE)
+
+    def test_echec_emission_annule_confirmation_et_permet_reprise(self):
+        creer_billet = Billet.objects.get_or_create
+
+        def interrompre(*args, **kwargs):
+            creer_billet(*args, **kwargs)
+            raise RuntimeError("Émission interrompue")
+
+        with patch("reservations.services.Billet.objects.get_or_create", side_effect=interrompre):
+            with self.assertRaises(RuntimeError):
+                self.envoyer()
+
+        self.verifier_en_attente()
+        self.assertEqual(self.envoyer().status_code, 200)
+        self.assertEqual(Billet.objects.count(), 1)
+        self.reservation.refresh_from_db()
+        self.assertEqual(self.reservation.statut, Reservation.Statut.CONFIRMEE)
+
+    @override_settings(SITE_URL="https://cinema.example.com")
+    def test_webhook_signe_programme_un_seul_email_apres_confirmation(self):
+        from django.core import mail
+
+        with self.captureOnCommitCallbacks(execute=True):
+            self.assertEqual(self.envoyer().status_code, 200)
+        with self.captureOnCommitCallbacks(execute=True) as callbacks:
+            self.assertEqual(self.envoyer().status_code, 200)
+
+        self.assertEqual(callbacks, [])
+        self.assertEqual(len(mail.outbox), 1)
+        self.assertEqual(mail.outbox[0].to, [self.reservation.email])
+        self.assertEqual(EnvoiBillets.objects.get().statut, EnvoiBillets.Statut.ENVOYE)
 
     def test_get_refuse(self):
         self.assertEqual(self.client.get(self.url).status_code, 405)

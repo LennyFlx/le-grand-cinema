@@ -2,9 +2,11 @@
 
 from datetime import timedelta
 
+from django.core import signing
 from django.core.exceptions import ValidationError
 from django.db import transaction
 from django.db.models import Exists, OuterRef, Q
+from django.urls import reverse
 from django.utils import timezone
 
 from cinema.models import Salle, Seance
@@ -25,6 +27,55 @@ def annuler_reservations_seance(seance):
         reservation_place__reservation__seance=seance,
         statut=Billet.Statut.VALIDE,
     ).update(statut=Billet.Statut.ANNULE)
+
+
+@transaction.atomic
+def generer_billets(reservation):
+    """Émet un billet par place payée, sans dupliquer ni réactiver les billets."""
+    # Le verrou sérialise l'émission avec les autres émissions et l'annulation.
+    actuelle = (
+        Reservation.objects.select_for_update(of=("self",))
+        .select_related("seance").get(pk=reservation.pk)
+    )
+    if (
+        actuelle.statut != Reservation.Statut.CONFIRMEE
+        or actuelle.seance.statut == Seance.Statut.ANNULEE
+        or not actuelle.paiements.filter(statut=Paiement.Statut.REUSSI).exists()
+    ):
+        raise ValidationError(
+            "Les billets nécessitent une réservation confirmée et un paiement réussi."
+        )
+
+    billets = []
+    for association in actuelle.places.order_by("pk"):
+        billet, _ = Billet.objects.get_or_create(reservation_place=association)
+        billets.append(billet)
+    return billets
+
+
+SALT_LIEN_BILLETS = "reservations.billets"
+
+
+def creer_url_billets(reservation):
+    """Crée un lien personnel signé, réutilisable depuis un autre navigateur."""
+    jeton = signing.Signer(salt=SALT_LIEN_BILLETS).sign(reservation.pk)
+    return reverse("reservations:consulter_billets", kwargs={"jeton": jeton})
+
+
+def obtenir_billets_valides(reservation):
+    """Relit les statuts en base avant de rendre un billet consultable."""
+    return (
+        Billet.objects.filter(
+            reservation_place__reservation=reservation,
+            reservation_place__reservation__statut=Reservation.Statut.CONFIRMEE,
+            reservation_place__reservation__paiements__statut=Paiement.Statut.REUSSI,
+            statut=Billet.Statut.VALIDE,
+        )
+        .exclude(reservation_place__reservation__seance__statut=Seance.Statut.ANNULEE)
+        .select_related("reservation_place__place")
+        .order_by("reservation_place__place__rangee", "reservation_place__place__numero")
+        .distinct()
+    )
 
 
 def reservations_provisoires_actives(maintenant=None):

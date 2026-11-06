@@ -9,7 +9,7 @@ from django.utils import timezone
 from stripe import APIConnectionError, InvalidRequestError
 
 from cinema.models import Film, Place, Salle, Seance
-from reservations.models import Reservation, ReservationPlace
+from reservations.models import Billet, EnvoiBillets, Reservation, ReservationPlace
 from reservations.services import compter_places_disponibles
 
 from .models import Paiement
@@ -156,15 +156,29 @@ class ParcoursPaiementTests(TestCase):
         self.assertContains(page, "confirmation du paiement est en cours")
         self.reservation.refresh_from_db()
         self.assertEqual(self.reservation.statut, Reservation.Statut.EN_ATTENTE)
+        self.assertFalse(Billet.objects.exists())
 
     def test_retour_verifie_le_succes_stripe_si_webhook_retarde(self):
         self.client.post(self.url)
         self.lecture.side_effect = lambda identifiant: self.session_stripe("complete")
         page = self.client.get(self.detail + "?retour=succes")
         self.assertContains(page, "Votre paiement est confirmé")
+        self.assertContains(page, "Voir mes billets")
+        self.assertEqual(Client().get(page.context["url_billets"]).status_code, 200)
         self.assertNotContains(page, 'action="' + self.url + '"')
         self.reservation.refresh_from_db()
         self.assertEqual(self.reservation.statut, Reservation.Statut.CONFIRMEE)
+        self.assertEqual(
+            EnvoiBillets.objects.get(reservation=self.reservation).statut,
+            EnvoiBillets.Statut.EN_ATTENTE,
+        )
+        billet = Billet.objects.get()
+        self.assertEqual(billet.reservation_place.reservation_id, self.reservation.pk)
+        self.assertEqual(billet.statut, Billet.Statut.VALIDE)
+        billet_initial = (billet.pk, billet.reference, billet.date_emission)
+        traiter_session_checkout("checkout.session.completed", self.session_stripe("complete").to_dict())
+        billet = Billet.objects.get()
+        self.assertEqual((billet.pk, billet.reference, billet.date_emission), billet_initial)
 
     def test_retour_abandon_permet_reprise_sans_prolonger(self):
         self.client.post(self.url)
