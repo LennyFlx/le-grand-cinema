@@ -9,7 +9,7 @@ from django.utils import timezone
 from stripe import APIConnectionError, InvalidRequestError
 
 from cinema.models import Film, Place, Salle, Seance
-from reservations.models import Reservation, ReservationPlace
+from reservations.models import Billet, Reservation, ReservationPlace
 from reservations.services import compter_places_disponibles
 
 from .models import Paiement
@@ -156,6 +156,7 @@ class ParcoursPaiementTests(TestCase):
         self.assertContains(page, "confirmation du paiement est en cours")
         self.reservation.refresh_from_db()
         self.assertEqual(self.reservation.statut, Reservation.Statut.EN_ATTENTE)
+        self.assertFalse(Billet.objects.exists())
 
     def test_retour_verifie_le_succes_stripe_si_webhook_retarde(self):
         self.client.post(self.url)
@@ -165,6 +166,13 @@ class ParcoursPaiementTests(TestCase):
         self.assertNotContains(page, 'action="' + self.url + '"')
         self.reservation.refresh_from_db()
         self.assertEqual(self.reservation.statut, Reservation.Statut.CONFIRMEE)
+        billet = Billet.objects.get()
+        self.assertEqual(billet.reservation_place.reservation_id, self.reservation.pk)
+        self.assertEqual(billet.statut, Billet.Statut.VALIDE)
+        billet_initial = (billet.pk, billet.reference, billet.date_emission)
+        traiter_session_checkout("checkout.session.completed", self.session_stripe("complete").to_dict())
+        billet = Billet.objects.get()
+        self.assertEqual((billet.pk, billet.reference, billet.date_emission), billet_initial)
 
     def test_retour_abandon_permet_reprise_sans_prolonger(self):
         self.client.post(self.url)

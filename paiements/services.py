@@ -10,6 +10,7 @@ from stripe import InvalidRequestError, StripeClient
 
 from cinema.models import Salle, Seance
 from reservations.models import Reservation
+from reservations.services import generer_billets
 
 from .models import Paiement
 
@@ -125,6 +126,7 @@ def traiter_session_checkout(type_evenement, session):
         if reservation.statut == Reservation.Statut.EN_ATTENTE and seance.statut != Seance.Statut.ANNULEE:
             reservation.statut = Reservation.Statut.CONFIRMEE
             reservation.save(update_fields=["statut"])
+            generer_billets(reservation)
 
     elif type_evenement == "checkout.session.expired":
         if session.get("status") != "expired" or session.get("payment_status") != "unpaid":

@@ -27,6 +27,30 @@ def annuler_reservations_seance(seance):
     ).update(statut=Billet.Statut.ANNULE)
 
 
+@transaction.atomic
+def generer_billets(reservation):
+    """Émet un billet par place payée, sans dupliquer ni réactiver les billets."""
+    # Le verrou sérialise l'émission avec les autres émissions et l'annulation.
+    actuelle = (
+        Reservation.objects.select_for_update(of=("self",))
+        .select_related("seance").get(pk=reservation.pk)
+    )
+    if (
+        actuelle.statut != Reservation.Statut.CONFIRMEE
+        or actuelle.seance.statut == Seance.Statut.ANNULEE
+        or not actuelle.paiements.filter(statut=Paiement.Statut.REUSSI).exists()
+    ):
+        raise ValidationError(
+            "Les billets nécessitent une réservation confirmée et un paiement réussi."
+        )
+
+    billets = []
+    for association in actuelle.places.order_by("pk"):
+        billet, _ = Billet.objects.get_or_create(reservation_place=association)
+        billets.append(billet)
+    return billets
+
+
 def reservations_provisoires_actives(maintenant=None):
     """Inclut les paiements en attente tant que Stripe ne les a pas clôturés."""
     maintenant = maintenant if maintenant is not None else timezone.now()
