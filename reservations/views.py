@@ -207,7 +207,7 @@ def renvoyer_email_billets(request, pk):
         if not envoye:
             messages.error(request, "L’envoi de l’email a échoué. Vos billets restent disponibles sur le site.")
         elif settings.EMAIL_BACKEND == "django.core.mail.backends.console.EmailBackend":
-            messages.success(request, "Le lien vers vos billets a été envoyé à l’adresse de la réservation.")
+            messages.success(request, "L’email de vos billets est affiché dans le terminal du serveur.")
         else:
             messages.success(request, "Le lien vers vos billets a été envoyé à l’adresse de la réservation.")
     return redirect("reservations:detail_reservation", pk=reservation.pk)
