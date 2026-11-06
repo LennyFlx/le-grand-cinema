@@ -51,7 +51,11 @@
                         </dl>
 
                         <div class="mt-6 border-t border-dashed border-zinc-300 pt-4">
-                            <p class="text-xs text-zinc-500">Référence du billet</p>
+                            <img src="{% url 'reservations:qr_billet' billet.reference %}"
+                                 alt="QR code de contrôle du billet pour la place {{ place.rangee }}{{ place.numero }}"
+                                 width="192" height="192" class="mx-auto block size-48">
+                            <p class="mt-2 text-center text-xs text-zinc-500">À présenter au personnel du cinéma.</p>
+                            <p class="mt-5 text-xs text-zinc-500">Référence du billet</p>
                             <p class="mt-2 font-mono text-xs leading-relaxed break-all text-zinc-700">{{ billet.reference }}</p>
                         </div>
                     </div>

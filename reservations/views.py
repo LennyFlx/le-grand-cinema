@@ -2,6 +2,8 @@ from math import ceil
 
 from django.conf import settings
 from django.contrib import messages
+from django.contrib.admin.views.decorators import staff_member_required
+from django.contrib.auth.decorators import permission_required
 from django.core import signing
 from django.core.exceptions import ImproperlyConfigured, ValidationError
 from django.http import Http404, HttpResponse
@@ -18,12 +20,13 @@ from paiements.models import Paiement
 from paiements.services import DUREE_PAIEMENT_CHECKOUT, actualiser_paiement
 from .emails import envoyer_billets
 from .forms import ReservationProvisoireForm, SelectionPlacesForm
-from .models import EnvoiBillets, Reservation
+from .models import Billet, EnvoiBillets, Reservation
 from .pdf import generer_pdf_billets
+from .qr_codes import creer_qr_code_billet
 from .services import (
     SALT_LIEN_BILLETS, creer_reservation_provisoire, creer_url_billets,
     obtenir_billets_valides, obtenir_disponibilites,
-    reservations_a_expirer, reservations_provisoires_actives,
+    reservations_a_expirer, reservations_provisoires_actives, verifier_validite_billet,
 )
 
 
@@ -211,3 +214,35 @@ def renvoyer_email_billets(request, pk):
         else:
             messages.success(request, "Le lien vers vos billets a été envoyé à l’adresse de la réservation.")
     return redirect("reservations:detail_reservation", pk=reservation.pk)
+
+
+@never_cache
+@require_safe
+def qr_billet(request, reference):
+    billet = get_object_or_404(Billet, reference=str(reference))
+    reservation = billet.reservation_place.reservation
+    if not obtenir_billets_valides(reservation).filter(pk=billet.pk).exists():
+        raise Http404("Ce billet n’est pas disponible.")
+    svg = creer_qr_code_billet(billet).asString("svg")
+    return _proteger_reponse_billets(HttpResponse(svg, content_type="image/svg+xml"))
+
+
+@never_cache
+@require_safe
+@staff_member_required
+@permission_required("reservations.view_billet", raise_exception=True)
+def controler_billet(request, reference):
+    billet = (
+        Billet.objects.select_related(
+            "reservation_place__place", "reservation_place__reservation__seance__film",
+            "reservation_place__reservation__seance__salle",
+        )
+        .filter(reference=str(reference)).first()
+    )
+    if billet is None:
+        valide, motif = False, "Ce billet est inconnu."
+    else:
+        valide, motif = verifier_validite_billet(billet)
+    return _proteger_reponse_billets(render(request, "reservations/controle_billet.html", {
+        "billet": billet, "valide": valide, "motif": motif, "reference": reference,
+    }, status=200 if billet is not None else 404))

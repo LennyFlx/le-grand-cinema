@@ -16,6 +16,8 @@ from reportlab.pdfbase import pdfmetrics
 from reportlab.pdfbase.ttfonts import TTFont
 from reportlab.platypus import KeepInFrame, PageBreak, Paragraph, SimpleDocTemplate, Spacer
 
+from .qr_codes import creer_qr_code_billet
+
 
 # ReportLab partage des ressources internes : une génération à la fois par processus.
 _VERROU_PDF = Lock()
@@ -68,7 +70,7 @@ def generer_pdf_billets(reservation, billets):
             spaceBefore=12, spaceAfter=24,
         )
         reference = ParagraphStyle(
-            "reference", parent=normal, fontSize=8, leading=12, spaceAfter=20,
+            "reference", parent=normal, fontSize=8, leading=12, spaceAfter=0,
         )
         seance = reservation.seance
         debut = timezone.localtime(seance.debut)
@@ -89,13 +91,20 @@ def generer_pdf_billets(reservation, billets):
                 Spacer(1, 8),
                 Paragraph("Référence du billet", label),
                 Paragraph(escape(str(billet.reference)), reference),
-                Paragraph("Présentez ce billet à l’entrée de la salle.", label),
             ]
             if numero > 1:
                 pages.append(PageBreak())
-            # Les titres longs restent sur la page du billet correspondant.
+            taille_qr = 40 * mm
+            # Le texte peut se réduire ; le QR conserve sa taille pour rester lisible.
             pages.append(KeepInFrame(
-                document.width, document.height, contenu, mode="shrink", vAlign="TOP",
+                document.width, document.height - taille_qr - 42, contenu,
+                mode="shrink", vAlign="TOP",
             ))
+            pages.extend([
+                Spacer(1, 8),
+                creer_qr_code_billet(billet, taille=taille_qr),
+                Spacer(1, 4),
+                Paragraph("À présenter au personnel du cinéma pour contrôle.", label),
+            ])
         document.build(pages, onFirstPage=_decorer_page, onLaterPages=_decorer_page)
         return buffer.getvalue()
