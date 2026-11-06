@@ -163,6 +163,8 @@ class ParcoursPaiementTests(TestCase):
         self.lecture.side_effect = lambda identifiant: self.session_stripe("complete")
         page = self.client.get(self.detail + "?retour=succes")
         self.assertContains(page, "Votre paiement est confirmé")
+        self.assertContains(page, "Voir mes billets")
+        self.assertEqual(Client().get(page.context["url_billets"]).status_code, 200)
         self.assertNotContains(page, 'action="' + self.url + '"')
         self.reservation.refresh_from_db()
         self.assertEqual(self.reservation.statut, Reservation.Statut.CONFIRMEE)

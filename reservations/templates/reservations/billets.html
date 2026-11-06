@@ -1,0 +1,63 @@
+{% extends "cinema/base.html" %}
+
+{% block title %}Vos billets — Le Grand Cinéma{% endblock %}
+
+{% block extra_head %}
+    <meta name="robots" content="noindex, nofollow">
+{% endblock %}
+
+{% block content %}
+{% with seance=reservation.seance %}
+    <a href="{% url 'cinema:films' %}" class="mb-6 inline-flex min-h-11 items-center rounded-sm text-sm font-medium text-zinc-600 underline underline-offset-4 hover:text-red-700 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-red-700">Retour à la programmation</a>
+
+    <header class="mb-8 flex min-w-0 flex-wrap items-end justify-between gap-5">
+        <div class="min-w-0">
+            <p class="text-xs font-semibold tracking-widest text-red-700 uppercase">Le Grand Cinéma · Billetterie</p>
+            <h1 class="mt-2 text-3xl font-bold tracking-tight sm:text-4xl">Vos billets</h1>
+            <p class="mt-3 text-zinc-600">Votre réservation est confirmée. Retrouvez vos {{ billets|length }} billet{{ billets|length|pluralize }} ci-dessous.</p>
+        </div>
+        <a href="{{ url_pdf }}" class="inline-flex min-h-12 w-full items-center justify-center rounded-md bg-yellow-400 px-5 py-3 text-center font-semibold text-zinc-950 hover:bg-yellow-300 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-red-700 sm:w-auto">Télécharger mes billets (PDF)</a>
+    </header>
+
+    <div class="mb-8 rounded-lg border border-yellow-200 bg-yellow-50 p-5 text-sm leading-relaxed sm:p-6">
+        <p class="font-semibold">Tout est prêt pour votre séance.</p>
+        <p class="mt-2 text-zinc-700">Présentez un billet par personne à l’entrée de la salle. Vous pouvez les afficher directement sur votre téléphone.</p>
+        <p class="mt-2 text-zinc-600">Conservez ce lien personnel pour retrouver vos billets depuis un autre appareil.</p>
+    </div>
+
+    <section aria-label="Billets de la réservation" class="grid min-w-0 gap-6 md:grid-cols-2">
+        {% for billet in billets %}
+            {% with place=billet.reservation_place.place %}
+                <article class="min-w-0 overflow-hidden rounded-lg border border-zinc-200 bg-white" aria-labelledby="billet-{{ forloop.counter }}">
+                    <div class="flex flex-wrap items-center justify-between gap-3 bg-zinc-900 px-5 py-4 text-white sm:px-6">
+                        <p class="text-sm font-medium">Billet {{ forloop.counter }} sur {{ billets|length }}</p>
+                        <p class="rounded-md bg-yellow-400 px-4 py-2 text-lg font-bold text-zinc-950">Place {{ place.rangee }}{{ place.numero }}</p>
+                    </div>
+
+                    <div class="p-5 sm:p-6">
+                        <p class="text-xs font-semibold tracking-widest text-red-700 uppercase">Votre séance</p>
+                        <h2 id="billet-{{ forloop.counter }}" class="mt-2 text-xl leading-tight font-bold wrap-anywhere sm:text-2xl">{{ seance.film.titre }}</h2>
+                        <dl class="mt-5 grid gap-4 text-sm sm:grid-cols-2">
+                            <div class="min-w-0">
+                                <dt class="text-zinc-500">Date et heure</dt>
+                                <dd class="mt-1 font-semibold">
+                                    <time datetime="{{ seance.debut|date:'c' }}" class="block wrap-anywhere">{{ seance.debut|date:"l d F Y" }}<span class="mt-1 block">à {{ seance.debut|date:"H:i" }}</span></time>
+                                </dd>
+                            </div>
+                            <div class="min-w-0">
+                                <dt class="text-zinc-500">Salle</dt>
+                                <dd class="mt-1 font-semibold wrap-anywhere">{{ seance.salle.nom }}</dd>
+                            </div>
+                        </dl>
+
+                        <div class="mt-6 border-t border-dashed border-zinc-300 pt-4">
+                            <p class="text-xs text-zinc-500">Référence du billet</p>
+                            <p class="mt-2 font-mono text-xs leading-relaxed break-all text-zinc-700">{{ billet.reference }}</p>
+                        </div>
+                    </div>
+                </article>
+            {% endwith %}
+        {% endfor %}
+    </section>
+{% endwith %}
+{% endblock %}

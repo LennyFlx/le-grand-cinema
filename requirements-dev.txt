@@ -1,0 +1,4 @@
+-r requirements.txt
+
+# Lecture du contenu et du nombre de pages des PDF dans les tests.
+pypdf==6.21.4

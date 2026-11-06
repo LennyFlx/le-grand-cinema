@@ -94,6 +94,9 @@
 
             {% if reservation.statut == 'confirmee' %}
                 <p class="mt-6 font-semibold" role="status">Votre paiement est confirmé et votre réservation est enregistrée.</p>
+                {% if url_billets %}
+                    <a href="{{ url_billets }}" class="mt-5 inline-flex min-h-12 w-full items-center justify-center rounded-md bg-yellow-400 px-5 py-3 text-center font-semibold text-zinc-950 hover:bg-yellow-300 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-red-700">Voir mes billets</a>
+                {% endif %}
             {% elif paiement_possible %}
                 {% if retour_annulation %}
                     <p class="mt-6 text-zinc-600" role="status">Le paiement n’a pas été finalisé. Vous pouvez le reprendre.</p>
