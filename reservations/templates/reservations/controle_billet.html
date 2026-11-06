@@ -1,0 +1,48 @@
+{% extends "cinema/base.html" %}
+
+{% block title %}Contrôle du billet — Le Grand Cinéma{% endblock %}
+
+{% block extra_head %}
+    <meta name="robots" content="noindex, nofollow">
+{% endblock %}
+
+{% block content %}
+    <div class="mx-auto max-w-2xl">
+        <header class="mb-8">
+            <p class="text-xs font-semibold tracking-widest text-red-700 uppercase">Espace personnel du cinéma</p>
+            <h1 class="mt-2 text-3xl font-bold tracking-tight sm:text-4xl">Contrôle du billet</h1>
+        </header>
+
+        <section class="rounded-lg border-2 p-5 sm:p-6 {% if valide %}border-green-700 bg-green-50 text-green-900{% else %}border-red-700 bg-red-50 text-red-900{% endif %}" aria-labelledby="controle-resultat">
+            <h2 id="controle-resultat" class="text-2xl font-bold" role="status">{% if valide %}Billet valide{% else %}Billet invalide{% endif %}</h2>
+            <p class="mt-3 leading-relaxed">{{ motif }}</p>
+        </section>
+
+        {% if billet %}
+            {% with association=billet.reservation_place seance=billet.reservation_place.reservation.seance %}
+                <section class="mt-6 min-w-0 rounded-lg border border-zinc-200 p-5 sm:p-6" aria-labelledby="controle-film">
+                    <div class="flex flex-wrap items-center justify-between gap-4">
+                        <h2 id="controle-film" class="min-w-0 text-xl font-bold wrap-anywhere">{{ seance.film.titre }}</h2>
+                        <p class="rounded-md bg-yellow-400 px-4 py-2 text-xl font-bold text-zinc-950">Place {{ association.place.rangee }}{{ association.place.numero }}</p>
+                    </div>
+                    <dl class="mt-6 grid gap-5 text-sm sm:grid-cols-2">
+                        <div class="min-w-0">
+                            <dt class="text-zinc-500">Date et heure</dt>
+                            <dd class="mt-1 font-semibold wrap-anywhere">
+                                <time datetime="{{ seance.debut|date:'c' }}">{{ seance.debut|date:"l d F Y" }} à {{ seance.debut|date:"H:i" }}</time>
+                            </dd>
+                        </div>
+                        <div class="min-w-0">
+                            <dt class="text-zinc-500">Salle</dt>
+                            <dd class="mt-1 font-semibold wrap-anywhere">{{ seance.salle.nom }}</dd>
+                        </div>
+                    </dl>
+                </section>
+            {% endwith %}
+        {% endif %}
+
+        <p class="mt-6 text-xs text-zinc-500">Référence du billet</p>
+        <p class="mt-2 font-mono text-sm break-all">{{ reference }}</p>
+        <a href="" class="mt-6 inline-flex min-h-11 items-center justify-center rounded-md border border-zinc-300 px-5 py-3 font-semibold hover:bg-zinc-50 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-red-700">Actualiser le contrôle</a>
+    </div>
+{% endblock %}

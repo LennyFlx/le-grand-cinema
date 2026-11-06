@@ -1,9 +1,11 @@
 """Disponibilités des places et gestion des réservations et billets associés."""
 
 from datetime import timedelta
+from urllib.parse import urlsplit
 
+from django.conf import settings
 from django.core import signing
-from django.core.exceptions import ValidationError
+from django.core.exceptions import ImproperlyConfigured, ValidationError
 from django.db import transaction
 from django.db.models import Exists, OuterRef, Q
 from django.urls import reverse
@@ -54,6 +56,37 @@ def generer_billets(reservation):
 
 
 SALT_LIEN_BILLETS = "reservations.billets"
+
+
+def creer_url_absolue(chemin):
+    """Construit les liens publics depuis l’origine configurée du site."""
+    base = settings.SITE_URL.rstrip("/")
+    origine = urlsplit(base)
+    if (
+        origine.scheme not in ("http", "https") or not origine.netloc
+        or origine.username or origine.password or origine.query or origine.fragment
+        or origine.path
+    ):
+        raise ImproperlyConfigured("SITE_URL doit contenir l’origine HTTP ou HTTPS du site.")
+    return base + chemin
+
+
+def verifier_validite_billet(billet, maintenant=None):
+    """Vérifie l’état courant pour le personnel, sans enregistrer une entrée."""
+    reservation = billet.reservation_place.reservation
+    seance = reservation.seance
+    if billet.statut != Billet.Statut.VALIDE:
+        return False, "Ce billet a été annulé."
+    if seance.statut == Seance.Statut.ANNULEE:
+        return False, "Cette séance a été annulée."
+    if reservation.statut != Reservation.Statut.CONFIRMEE:
+        return False, "La réservation n’est pas confirmée."
+    if not reservation.paiements.filter(statut=Paiement.Statut.REUSSI).exists():
+        return False, "Aucun paiement confirmé n’est associé à ce billet."
+    maintenant = maintenant if maintenant is not None else timezone.now()
+    if seance.statut == Seance.Statut.TERMINEE or seance.fin <= maintenant:
+        return False, "Cette séance est terminée."
+    return True, "Le paiement et la réservation sont confirmés."
 
 
 def creer_url_billets(reservation):

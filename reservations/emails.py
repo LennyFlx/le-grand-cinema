@@ -3,10 +3,9 @@
 import logging
 from datetime import timedelta
 from functools import partial
-from urllib.parse import urlsplit
 
 from django.conf import settings
-from django.core.exceptions import ImproperlyConfigured, ValidationError
+from django.core.exceptions import ValidationError
 from django.core.mail import EmailMultiAlternatives
 from django.db import transaction
 from django.template.loader import render_to_string
@@ -14,7 +13,7 @@ from django.utils import timezone
 
 from .models import EnvoiBillets, Reservation
 from .pdf import generer_pdf_billets
-from .services import creer_url_billets, obtenir_billets_valides
+from .services import creer_url_absolue, creer_url_billets, obtenir_billets_valides
 
 
 logger = logging.getLogger(__name__)
@@ -62,17 +61,6 @@ def _preparer_envoi(reservation_id, renvoi):
     return envoi, reservation, maintenant
 
 
-def _url_absolue_billets(reservation):
-    base = settings.SITE_URL.rstrip("/")
-    origine = urlsplit(base)
-    if (
-        origine.scheme not in ("http", "https") or not origine.netloc
-        or origine.username or origine.password or origine.query or origine.fragment
-        or origine.path
-    ):
-        raise ImproperlyConfigured("SITE_URL doit contenir l’origine HTTP ou HTTPS du site.")
-    return base + creer_url_billets(reservation)
-
 
 def envoyer_billets(reservation_id, *, renvoi=False):
     """Réserve une tentative courte, puis contacte le service mail hors transaction."""
@@ -89,7 +77,7 @@ def envoyer_billets(reservation_id, *, renvoi=False):
             raise ValidationError("Les billets ne sont plus disponibles.")
         contexte = {
             "reservation": reservation, "billets": billets,
-            "url_billets": _url_absolue_billets(reservation),
+            "url_billets": creer_url_absolue(creer_url_billets(reservation)),
         }
         message = EmailMultiAlternatives(
             subject="Vos billets — Le Grand Cinéma",

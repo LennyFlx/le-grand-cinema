@@ -2,3 +2,7 @@
 
 # Lecture du contenu et du nombre de pages des PDF dans les tests.
 pypdf==6.21.4
+
+# Décodage des QR codes réellement présents dans les PDF.
+pypdfium2==5.14.0
+zxing-cpp==3.1.1
