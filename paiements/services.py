@@ -9,6 +9,7 @@ from django.utils import timezone
 from stripe import InvalidRequestError, StripeClient
 
 from cinema.models import Salle, Seance
+from reservations.emails import programmer_envoi_billets
 from reservations.models import Reservation
 from reservations.services import generer_billets
 
@@ -127,6 +128,7 @@ def traiter_session_checkout(type_evenement, session):
             reservation.statut = Reservation.Statut.CONFIRMEE
             reservation.save(update_fields=["statut"])
             generer_billets(reservation)
+            programmer_envoi_billets(reservation)
 
     elif type_evenement == "checkout.session.expired":
         if session.get("status") != "expired" or session.get("payment_status") != "unpaid":

@@ -9,7 +9,7 @@ from django.utils import timezone
 from stripe import APIConnectionError, InvalidRequestError
 
 from cinema.models import Film, Place, Salle, Seance
-from reservations.models import Billet, Reservation, ReservationPlace
+from reservations.models import Billet, EnvoiBillets, Reservation, ReservationPlace
 from reservations.services import compter_places_disponibles
 
 from .models import Paiement
@@ -168,6 +168,10 @@ class ParcoursPaiementTests(TestCase):
         self.assertNotContains(page, 'action="' + self.url + '"')
         self.reservation.refresh_from_db()
         self.assertEqual(self.reservation.statut, Reservation.Statut.CONFIRMEE)
+        self.assertEqual(
+            EnvoiBillets.objects.get(reservation=self.reservation).statut,
+            EnvoiBillets.Statut.EN_ATTENTE,
+        )
         billet = Billet.objects.get()
         self.assertEqual(billet.reservation_place.reservation_id, self.reservation.pk)
         self.assertEqual(billet.statut, Billet.Statut.VALIDE)

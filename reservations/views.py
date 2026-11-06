@@ -1,5 +1,6 @@
 from math import ceil
 
+from django.conf import settings
 from django.contrib import messages
 from django.core import signing
 from django.core.exceptions import ImproperlyConfigured, ValidationError
@@ -15,8 +16,9 @@ from cinema.models import Seance
 from cinema.plan_salle import organiser_plan
 from paiements.models import Paiement
 from paiements.services import DUREE_PAIEMENT_CHECKOUT, actualiser_paiement
+from .emails import envoyer_billets
 from .forms import ReservationProvisoireForm, SelectionPlacesForm
-from .models import Reservation
+from .models import EnvoiBillets, Reservation
 from .pdf import generer_pdf_billets
 from .services import (
     SALT_LIEN_BILLETS, creer_reservation_provisoire, creer_url_billets,
@@ -130,9 +132,12 @@ def detail_reservation(request, pk):
             and reservation.montant_total > 0
         ))
     )
+    billets_disponibles = obtenir_billets_valides(reservation).exists()
     return render(request, "reservations/detail_reservation.html", {
         "reservation": reservation,
-        "url_billets": creer_url_billets(reservation) if obtenir_billets_valides(reservation).exists() else None,
+        "url_billets": creer_url_billets(reservation) if billets_disponibles else None,
+        "envoi_billets": EnvoiBillets.objects.filter(reservation=reservation).first() if billets_disponibles else None,
+        "email_console": settings.EMAIL_BACKEND == "django.core.mail.backends.console.EmailBackend",
         "active": active,
         "paiement_possible": paiement_possible,
         "paiement_deja_demarre": paiement is not None,
@@ -186,3 +191,23 @@ def telecharger_billets(request, jeton):
     response = HttpResponse(generer_pdf_billets(reservation, billets), content_type="application/pdf")
     response["Content-Disposition"] = f'attachment; filename="billets-reservation-{reservation.pk}.pdf"'
     return _proteger_reponse_billets(response)
+
+
+@never_cache
+@require_POST
+def renvoyer_email_billets(request, pk):
+    reservation = get_object_or_404(
+        Reservation, pk=pk if request.session.get("reservation_provisoire_id") == pk else None,
+    )
+    try:
+        envoye = envoyer_billets(reservation.pk, renvoi=True)
+    except ValidationError as erreur:
+        messages.error(request, " ".join(erreur.messages))
+    else:
+        if not envoye:
+            messages.error(request, "L’envoi de l’email a échoué. Vos billets restent disponibles sur le site.")
+        elif settings.EMAIL_BACKEND == "django.core.mail.backends.console.EmailBackend":
+            messages.success(request, "Le lien vers vos billets a été envoyé à l’adresse de la réservation.")
+        else:
+            messages.success(request, "Le lien vers vos billets a été envoyé à l’adresse de la réservation.")
+    return redirect("reservations:detail_reservation", pk=reservation.pk)

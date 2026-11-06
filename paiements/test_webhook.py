@@ -13,7 +13,7 @@ from django.utils import timezone
 
 from cinema.models import Film, Place, Salle, Seance
 from cinema.services import annuler_seance
-from reservations.models import Billet, Reservation, ReservationPlace
+from reservations.models import Billet, EnvoiBillets, Reservation, ReservationPlace
 from reservations.services import (
     compter_places_disponibles, creer_reservation_provisoire, expirer_reservations,
 )
@@ -88,6 +88,7 @@ class WebhookStripeTests(TestCase):
         self.assertEqual(self.paiement.statut, Paiement.Statut.EN_ATTENTE)
         self.assertEqual(self.reservation.statut, Reservation.Statut.EN_ATTENTE)
         self.assertFalse(Billet.objects.exists())
+        self.assertFalse(EnvoiBillets.objects.exists())
 
     def test_paiement_signe_confirme_sans_session_navigateur_ni_csrf(self):
         self.assertEqual(self.envoyer().status_code, 200)
@@ -250,6 +251,20 @@ class WebhookStripeTests(TestCase):
         self.assertEqual(Billet.objects.count(), 1)
         self.reservation.refresh_from_db()
         self.assertEqual(self.reservation.statut, Reservation.Statut.CONFIRMEE)
+
+    @override_settings(SITE_URL="https://cinema.example.com")
+    def test_webhook_signe_programme_un_seul_email_apres_confirmation(self):
+        from django.core import mail
+
+        with self.captureOnCommitCallbacks(execute=True):
+            self.assertEqual(self.envoyer().status_code, 200)
+        with self.captureOnCommitCallbacks(execute=True) as callbacks:
+            self.assertEqual(self.envoyer().status_code, 200)
+
+        self.assertEqual(callbacks, [])
+        self.assertEqual(len(mail.outbox), 1)
+        self.assertEqual(mail.outbox[0].to, [self.reservation.email])
+        self.assertEqual(EnvoiBillets.objects.get().statut, EnvoiBillets.Statut.ENVOYE)
 
     def test_get_refuse(self):
         self.assertEqual(self.client.get(self.url).status_code, 405)

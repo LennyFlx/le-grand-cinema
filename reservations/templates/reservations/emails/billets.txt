@@ -1,0 +1,18 @@
+{% autoescape off %}Bonjour,
+
+Votre réservation n°{{ reservation.pk }} est confirmée.
+
+Film : {{ reservation.seance.film.titre }}
+Séance : {{ reservation.seance.debut|date:"l d F Y" }} à {{ reservation.seance.debut|date:"H:i" }}
+Salle : {{ reservation.seance.salle.nom }}
+Places : {% for billet in billets %}{{ billet.reservation_place.place.rangee }}{{ billet.reservation_place.place.numero }}{% if not forloop.last %}, {% endif %}{% endfor %}
+Montant réglé : {{ reservation.montant_total }} €
+
+Consultez vos billets et téléchargez leur PDF :
+{{ url_billets }}
+
+Conservez ce lien personnel pour retrouver vos billets sans créer de compte.
+
+À bientôt,
+Le Grand Cinéma
+{% endautoescape %}

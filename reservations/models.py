@@ -36,6 +36,21 @@ class Reservation(models.Model):
         ]
 
 
+class EnvoiBillets(models.Model):
+    class Statut(models.TextChoices):
+        EN_ATTENTE = "en_attente", "En attente"
+        EN_COURS = "en_cours", "En cours"
+        ENVOYE = "envoye", "Envoyé"
+        ECHOUE = "echoue", "Échoué"
+
+    reservation = models.OneToOneField(
+        Reservation, on_delete=models.PROTECT, related_name="envoi_billets",
+    )
+    statut = models.CharField(max_length=20, choices=Statut.choices, default=Statut.EN_ATTENTE)
+    date_derniere_tentative = models.DateTimeField(null=True, blank=True)
+    date_envoi = models.DateTimeField(null=True, blank=True)
+
+
 class ReservationPlace(models.Model):
     reservation = models.ForeignKey(
         Reservation,
