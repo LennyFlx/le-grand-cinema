@@ -1,0 +1,51 @@
+{% extends "admin/base_site.html" %}
+
+{% block breadcrumbs %}
+  <div class="breadcrumbs">
+    <a href="{% url 'admin:index' %}">Accueil</a>
+    &rsaquo; <a href="{% url 'admin:reservations_reservation_changelist' %}">Réservations</a>
+    &rsaquo; <a href="{% url 'admin:reservations_reservation_change' reservation.pk %}">Réservation n°{{ reservation.pk }}</a>
+    &rsaquo; Annulation
+  </div>
+{% endblock %}
+
+{% block content %}
+  <p>Vérifiez les informations avant de confirmer l’annulation.</p>
+  <dl>
+    <dt>Réservation</dt><dd>N°{{ reservation.pk }} — {{ statut_reservation }}</dd>
+    <dt>Email</dt><dd>{{ reservation.email }}</dd>
+    <dt>Film</dt><dd>{{ reservation.seance.film.titre }}</dd>
+    <dt>Séance</dt><dd>{{ debut_seance }} — {{ reservation.seance.salle.nom }}</dd>
+    <dt>Montant total</dt><dd>{{ reservation.montant_total }} €</dd>
+    <dt>Places</dt>
+    <dd>
+      <ul>
+        {% for association in places %}
+          <li>{{ association.place.rangee }}{{ association.place.numero }} — {{ association.prix_unitaire }} €</li>
+        {% empty %}
+          <li>Aucune place associée.</li>
+        {% endfor %}
+      </ul>
+    </dd>
+  </dl>
+  <p>L’historique de la réservation et des paiements sera conservé. Les billets seront invalidés.
+    Les places actives seront libérées pour cette séance, selon ses disponibilités.</p>
+  {% if reservation_payee %}
+    <p><strong>Cette réservation a été payée. Un remboursement peut être nécessaire :
+      vérifiez et traitez les paiements manuellement dans Stripe.
+      Aucun remboursement automatique n’est effectué.</strong></p>
+  {% endif %}
+  {% if deja_annulee %}
+    <p role="alert">Cette réservation est déjà annulée.</p>
+  {% elif paiement_en_attente %}
+    <p role="alert">Un paiement est encore en attente. Vérifiez ou clôturez la session Stripe
+      avant de réessayer l’annulation. Les places restent protégées.</p>
+  {% else %}
+    <form method="post">
+      {% csrf_token %}
+      <input type="hidden" name="confirmer" value="oui">
+      <input type="submit" value="Confirmer l’annulation">
+    </form>
+  {% endif %}
+  <p><a href="{% url 'admin:reservations_reservation_change' reservation.pk %}">Retour sans annuler</a></p>
+{% endblock %}

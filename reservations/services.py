@@ -32,6 +32,31 @@ def annuler_reservations_seance(seance):
 
 
 @transaction.atomic
+def annuler_reservation(reservation):
+    """Annule une réservation sans effacer l'historique ni rembourser le paiement."""
+    reference = Reservation.objects.select_related("seance").get(pk=reservation.pk)
+    # Même ordre que la réservation de places et les résultats Stripe.
+    Salle.objects.select_for_update().get(pk=reference.seance.salle_id)
+    Seance.objects.select_for_update().get(pk=reference.seance_id)
+    actuelle = Reservation.objects.select_for_update().get(pk=reference.pk)
+    if actuelle.statut == Reservation.Statut.ANNULEE:
+        raise ValidationError("Cette réservation est déjà annulée.")
+    if actuelle.paiements.filter(statut=Paiement.Statut.EN_ATTENTE).exists():
+        raise ValidationError(
+            "Un paiement est encore en attente. Vérifiez ou clôturez la session "
+            "Stripe avant de réessayer l’annulation. Les places restent protégées."
+        )
+
+    paiements_reussis = actuelle.paiements.filter(statut=Paiement.Statut.REUSSI).count()
+    actuelle.statut = Reservation.Statut.ANNULEE
+    actuelle.save(update_fields=["statut"])
+    Billet.objects.filter(
+        reservation_place__reservation=actuelle, statut=Billet.Statut.VALIDE,
+    ).update(statut=Billet.Statut.ANNULE)
+    return paiements_reussis
+
+
+@transaction.atomic
 def generer_billets(reservation):
     """Émet un billet par place payée, sans dupliquer ni réactiver les billets."""
     # Le verrou sérialise l'émission avec les autres émissions et l'annulation.

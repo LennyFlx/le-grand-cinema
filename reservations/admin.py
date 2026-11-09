@@ -1,14 +1,22 @@
-"""Consultation des réservations par le personnel, sans modification métier."""
+"""Consultation et annulation contrôlée des réservations par le personnel."""
 
-from django.contrib import admin
+from django.contrib import admin, messages
+from django.core.exceptions import PermissionDenied, ValidationError
+from django.db import transaction
 from django.db.models import Count
+from django.http import Http404, HttpResponseNotAllowed
+from django.shortcuts import redirect
+from django.template.response import TemplateResponse
+from django.urls import path
 from django.utils import timezone
 from django.utils.formats import date_format
 from django.utils.html import format_html, format_html_join
 
 from cinema.models import Seance
+from paiements.models import Paiement
 
 from .models import Reservation
+from .services import annuler_reservation
 
 
 class SeanceReservationFilter(admin.SimpleListFilter):
@@ -65,6 +73,7 @@ class ReservationAdmin(admin.ModelAdmin):
     ordering = ("-date_creation", "-pk")
     actions = None
     change_list_template = "admin/reservations/reservation/change_list.html"
+    change_form_template = "admin/reservations/reservation/change_form.html"
     readonly_fields = (
         "id", "email", "statut_reservation", "montant_total",
         "date_creation", "date_expiration", "film", "salle",
@@ -78,6 +87,86 @@ class ReservationAdmin(admin.ModelAdmin):
         ("Dates de réservation", {"fields": ("date_creation", "date_expiration")}),
         ("Places réservées", {"fields": ("nombre_places", "places_reservees")}),
     )
+
+    def get_urls(self):
+        return [
+            path(
+                "<int:object_id>/annuler/",
+                self.admin_site.admin_view(self.annuler_reservation_view),
+                name="reservations_reservation_annuler",
+            ),
+        ] + super().get_urls()
+
+    def has_annulation_permission(self, request):
+        return (
+            self.has_view_permission(request)
+            and request.user.has_perm("reservations.change_reservation")
+        )
+
+    def render_change_form(self, request, context, add=False, change=False, form_url="", obj=None):
+        context["peut_annuler_reservation"] = (
+            obj is not None and obj.statut != Reservation.Statut.ANNULEE
+            and self.has_annulation_permission(request)
+        )
+        return super().render_change_form(request, context, add, change, form_url, obj)
+
+    def annuler_reservation_view(self, request, object_id):
+        if not self.has_annulation_permission(request):
+            raise PermissionDenied
+        if request.method not in ("GET", "POST"):
+            return HttpResponseNotAllowed(["GET", "POST"])
+        reservation = self.get_object(request, str(object_id))
+        if reservation is None:
+            raise Http404("Cette réservation n’existe pas.")
+
+        if request.method == "POST":
+            if request.POST.get("confirmer") != "oui":
+                self.message_user(
+                    request, "Confirmez explicitement l’annulation de la réservation.",
+                    level=messages.ERROR,
+                )
+                return redirect("admin:reservations_reservation_annuler", object_id)
+            try:
+                with transaction.atomic():
+                    paiements_reussis = annuler_reservation(reservation)
+                    self.log_change(
+                        request, reservation,
+                        "Annulation de la réservation et invalidation des billets. Historique conservé.",
+                    )
+            except ValidationError as erreur:
+                self.message_user(request, " ".join(erreur.messages), level=messages.ERROR)
+            else:
+                self.message_user(
+                    request, f"La réservation n°{reservation.pk} a été annulée. Historique conservé.",
+                )
+                if paiements_reussis:
+                    self.message_user(
+                        request,
+                        "Cette réservation a été payée : un remboursement peut être nécessaire. "
+                        "Vérifiez les paiements dans Stripe et traitez le remboursement manuellement. "
+                        "Aucun remboursement automatique n’a été effectué.",
+                        level=messages.WARNING,
+                    )
+            return redirect("admin:reservations_reservation_change", reservation.pk)
+
+        paiement_en_attente = reservation.paiements.filter(statut=Paiement.Statut.EN_ATTENTE).exists()
+        contexte = {
+            **self.admin_site.each_context(request),
+            "title": f"Confirmer l’annulation de la réservation n°{reservation.pk}",
+            "opts": self.model._meta,
+            "reservation": reservation,
+            "statut_reservation": self.statut_reservation(reservation),
+            "debut_seance": self.debut_seance(reservation),
+            "places": reservation.places.select_related("place").order_by(
+                "place__rangee", "place__numero",
+            ),
+            "deja_annulee": reservation.statut == Reservation.Statut.ANNULEE,
+            "paiement_en_attente": paiement_en_attente,
+            "reservation_payee": reservation.paiements.filter(statut=Paiement.Statut.REUSSI).exists(),
+        }
+        return TemplateResponse(
+            request, "admin/reservations/reservation/confirmer_annulation.html", contexte,
+        )
 
     def get_queryset(self, request):
         return (
