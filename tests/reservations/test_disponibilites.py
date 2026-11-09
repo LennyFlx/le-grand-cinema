@@ -6,8 +6,8 @@ from django.test import TestCase
 from django.urls import reverse
 
 from cinema.models import Film, Place, Salle, Seance
-from .models import Reservation, ReservationPlace
-from .services import compter_places_disponibles, obtenir_disponibilites
+from reservations.models import Reservation, ReservationPlace
+from reservations.services import compter_places_disponibles, obtenir_disponibilites
 
 
 class DisponibilitesSeanceTests(TestCase):

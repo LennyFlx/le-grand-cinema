@@ -6,7 +6,7 @@ from django.test import TestCase, override_settings
 from django.urls import reverse
 from django.utils import timezone
 
-from .models import Film, Genre, Participation, Personne, Salle, Seance
+from cinema.models import Film, Genre, Participation, Personne, Salle, Seance
 
 
 class DetailFilmTests(TestCase):

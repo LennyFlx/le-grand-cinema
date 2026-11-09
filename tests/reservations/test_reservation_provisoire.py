@@ -10,8 +10,8 @@ from django.test import TestCase, TransactionTestCase
 from django.utils import timezone
 
 from cinema.models import Film, Place, Salle, Seance
-from .models import Billet, Reservation, ReservationPlace
-from .services import compter_places_disponibles, creer_reservation_provisoire, expirer_reservations
+from reservations.models import Billet, Reservation, ReservationPlace
+from reservations.services import compter_places_disponibles, creer_reservation_provisoire, expirer_reservations
 
 
 class DonneesReservationProvisoire:

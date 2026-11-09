@@ -7,7 +7,7 @@ from django.test import Client, TestCase
 from django.urls import reverse
 
 from cinema.models import Film, Place, Salle, Seance
-from .models import Reservation, ReservationPlace
+from reservations.models import Reservation, ReservationPlace
 
 
 class ValidationSelectionTests(TestCase):

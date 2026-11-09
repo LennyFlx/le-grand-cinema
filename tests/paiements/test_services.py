@@ -12,8 +12,8 @@ from stripe.params.checkout import SessionCreateParams
 from cinema.models import Film, Salle, Seance
 from reservations.models import Reservation
 
-from .models import Paiement
-from .services import compter_paiements_a_traiter, creer_session_checkout
+from paiements.models import Paiement
+from paiements.services import compter_paiements_a_traiter, creer_session_checkout
 
 
 class SuiviPaiementsTests(TestCase):

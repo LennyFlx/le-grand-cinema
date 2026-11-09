@@ -7,7 +7,7 @@ from django.db.models.deletion import ProtectedError
 from django.test import TestCase, TransactionTestCase
 from django.utils import timezone
 
-from .models import Film, Genre, Participation, Personne
+from cinema.models import Film, Genre, Participation, Personne
 
 
 class InformationsFilmsTests(TestCase):

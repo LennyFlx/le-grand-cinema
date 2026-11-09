@@ -6,7 +6,7 @@ from django.test import TestCase, override_settings
 from django.urls import reverse
 from django.utils import timezone
 
-from .models import Film, Salle, Seance
+from cinema.models import Film, Salle, Seance
 
 
 @override_settings(TIME_ZONE="Europe/Paris")

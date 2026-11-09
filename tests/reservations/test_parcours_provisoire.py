@@ -8,8 +8,8 @@ from django.urls import reverse
 from django.utils import timezone
 
 from cinema.models import Film, Place, Salle, Seance
-from .models import Reservation, ReservationPlace
-from .services import compter_places_disponibles
+from reservations.models import Reservation, ReservationPlace
+from reservations.services import compter_places_disponibles
 
 
 class ParcoursReservationProvisoireTests(TestCase):
