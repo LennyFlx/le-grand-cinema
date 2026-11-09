@@ -1,0 +1,10 @@
+{% extends "admin/change_form.html" %}
+
+{% block object-tools-items %}
+  {% if peut_annuler_reservation %}
+    <li>
+      <a href="{% url 'admin:reservations_reservation_annuler' original.pk %}">Annuler la réservation</a>
+    </li>
+  {% endif %}
+  {{ block.super }}
+{% endblock %}
