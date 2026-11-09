@@ -18,7 +18,7 @@ from reservations.services import (
     compter_places_disponibles, creer_reservation_provisoire, expirer_reservations,
 )
 
-from .models import Paiement
+from paiements.models import Paiement
 
 SECRET_WEBHOOK = "whsec_test_webhook"
 

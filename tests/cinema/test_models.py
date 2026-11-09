@@ -5,9 +5,9 @@ from django.db import IntegrityError, transaction
 from django.test import TestCase
 from django.utils import timezone
 
-from .models import Film, Place, Salle, Seance
+from cinema.models import Film, Place, Salle, Seance
 from reservations.models import Reservation, ReservationPlace
-from .services import enregistrer_place, enregistrer_salle, enregistrer_seance
+from cinema.services import enregistrer_place, enregistrer_salle, enregistrer_seance
 
 
 class ProgrammationTests(TestCase):

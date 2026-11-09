@@ -1,6 +1,6 @@
 from django.test import SimpleTestCase
 
-from .plan_salle import organiser_plan
+from cinema.plan_salle import organiser_plan
 
 
 class PlanSalleTests(SimpleTestCase):

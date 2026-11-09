@@ -3,7 +3,7 @@ from django.contrib.auth.models import Permission
 from django.test import TestCase
 from django.urls import reverse
 
-from .models import Film, Genre, Participation, Personne
+from cinema.models import Film, Genre, Participation, Personne
 
 
 class InformationsFilmsAdminTests(TestCase):

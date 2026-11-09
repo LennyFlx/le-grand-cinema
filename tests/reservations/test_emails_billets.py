@@ -21,9 +21,9 @@ from cinema.services import annuler_seance
 from paiements.models import Paiement
 from paiements.services import traiter_session_checkout
 
-from .emails import envoyer_billets, programmer_envoi_billets
-from .models import Billet, EnvoiBillets, Reservation, ReservationPlace
-from .services import creer_url_billets, generer_billets
+from reservations.emails import envoyer_billets, programmer_envoi_billets
+from reservations.models import Billet, EnvoiBillets, Reservation, ReservationPlace
+from reservations.services import creer_url_billets, generer_billets
 
 
 def creer_reservation_email(*, confirmee=True):

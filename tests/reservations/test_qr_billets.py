@@ -18,10 +18,10 @@ from cinema.models import Film, Place, Salle, Seance
 from cinema.services import annuler_seance
 from paiements.models import Paiement
 
-from .emails import envoyer_billets
-from .models import Billet, Reservation, ReservationPlace
-from .qr_codes import creer_url_controle_billet
-from .services import creer_url_billets, generer_billets
+from reservations.emails import envoyer_billets
+from reservations.models import Billet, Reservation, ReservationPlace
+from reservations.qr_codes import creer_url_controle_billet
+from reservations.services import creer_url_billets, generer_billets
 
 
 @override_settings(

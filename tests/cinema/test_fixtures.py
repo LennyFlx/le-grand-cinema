@@ -10,7 +10,7 @@ from django.test import SimpleTestCase, TestCase
 
 from scripts.generer_fixtures_demo import FUSEAU, generer_seances, main
 
-from .models import Film, Genre, Participation, Personne, Place, Salle, Seance
+from cinema.models import Film, Genre, Participation, Personne, Place, Salle, Seance
 
 
 class SallesInitialesFixtureTests(TestCase):

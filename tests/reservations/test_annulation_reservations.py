@@ -20,8 +20,8 @@ from cinema.models import Film, Place, Salle, Seance
 from paiements.models import Paiement
 from paiements.services import traiter_session_checkout
 
-from .models import Billet, EnvoiBillets, Reservation, ReservationPlace
-from .services import (
+from reservations.models import Billet, EnvoiBillets, Reservation, ReservationPlace
+from reservations.services import (
     annuler_reservation, compter_places_disponibles, creer_reservation_provisoire,
     creer_url_billets, generer_billets, verifier_validite_billet,
 )

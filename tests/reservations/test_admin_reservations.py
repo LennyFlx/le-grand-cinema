@@ -13,7 +13,7 @@ from django.utils.formats import date_format
 from cinema.models import Film, Place, Salle, Seance
 from paiements.models import Paiement
 
-from .models import Billet, EnvoiBillets, Reservation, ReservationPlace
+from reservations.models import Billet, EnvoiBillets, Reservation, ReservationPlace
 
 
 class ConsultationReservationsAdminTests(TestCase):

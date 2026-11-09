@@ -10,8 +10,8 @@ from cinema.models import Film, Place, Salle, Seance
 from cinema.services import annuler_seance
 from paiements.models import Paiement
 
-from .models import Billet, Reservation, ReservationPlace
-from .services import SALT_LIEN_BILLETS, creer_url_billets, generer_billets
+from reservations.models import Billet, Reservation, ReservationPlace
+from reservations.services import SALT_LIEN_BILLETS, creer_url_billets, generer_billets
 
 
 class ConsultationBilletsTests(TestCase):
