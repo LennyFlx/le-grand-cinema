@@ -1,0 +1,21 @@
+[run]
+branch = True
+# Garder les chemins des applications distincts dans les rapports XML.
+source_pkgs =
+    cinema
+    reservations
+    paiements
+omit =
+    */migrations/*
+
+[report]
+show_missing = True
+skip_empty = True
+precision = 2
+
+[html]
+directory = htmlcov
+title = Le Grand Cinéma - Couverture des tests
+
+[xml]
+output = coverage.xml

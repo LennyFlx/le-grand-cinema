@@ -6,3 +6,6 @@ pypdf==6.21.4
 # Décodage des QR codes réellement présents dans les PDF.
 pypdfium2==5.14.0
 zxing-cpp==3.1.1
+
+# Mesure de la couverture du code Python (lignes et branches).
+coverage==7.17.2
