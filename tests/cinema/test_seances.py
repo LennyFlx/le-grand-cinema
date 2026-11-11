@@ -95,7 +95,7 @@ class ModificationAnnulationSeanceTests(TestCase):
         self.assertEqual(self.seance.debut, self.debut)
 
     def test_confirmation_sans_effet_avant_validation(self):
-        reservation, billet, paiement = self.reserver()
+        reservation, _, _ = self.reserver()
         response = self.action()
         self.assertContains(response, reservation.email)
         self.assertContains(response, "manuellement")
