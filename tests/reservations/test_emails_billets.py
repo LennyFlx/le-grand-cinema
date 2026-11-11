@@ -147,10 +147,12 @@ class EnvoiEmailBilletsTests(TestCase):
 
     def test_echec_generation_pdf_conserve_paiement_et_permet_relance(self):
         billets_initiaux = list(Billet.objects.order_by("pk").values())
-        with patch("reservations.emails.generer_pdf_billets", side_effect=RuntimeError("Export interrompu")):
-            with patch("reservations.emails.EmailMultiAlternatives.send") as envoi_message:
-                with self.assertLogs("reservations.emails", level="WARNING"):
-                    self.assertFalse(envoyer_billets(self.reservation.pk))
+        with (
+            patch("reservations.emails.generer_pdf_billets", side_effect=RuntimeError("Export interrompu")),
+            patch("reservations.emails.EmailMultiAlternatives.send") as envoi_message,
+            self.assertLogs("reservations.emails", level="WARNING"),
+        ):
+            self.assertFalse(envoyer_billets(self.reservation.pk))
 
         envoi_message.assert_not_called()
         self.assertEqual(len(mail.outbox), 0)
@@ -171,22 +173,26 @@ class EnvoiEmailBilletsTests(TestCase):
         self.assertEqual(list(Billet.objects.order_by("pk").values()), billets_initiaux)
 
     def test_envoi_differe_et_demande_conservee_en_base(self):
-        with self.captureOnCommitCallbacks(execute=False) as callbacks:
-            with transaction.atomic():
-                programmer_envoi_billets(self.reservation)
-                self.assertEqual(len(mail.outbox), 0)
-                self.assertEqual(EnvoiBillets.objects.get().statut, EnvoiBillets.Statut.EN_ATTENTE)
+        with (
+            self.captureOnCommitCallbacks(execute=False) as callbacks,
+            transaction.atomic(),
+        ):
+            programmer_envoi_billets(self.reservation)
+            self.assertEqual(len(mail.outbox), 0)
+            self.assertEqual(EnvoiBillets.objects.get().statut, EnvoiBillets.Statut.EN_ATTENTE)
 
         self.assertEqual(len(callbacks), 1)
         callbacks[0]()
         self.assertEqual(len(mail.outbox), 1)
 
     def test_transaction_annulee_ne_conserve_ni_demande_ni_email(self):
-        with self.captureOnCommitCallbacks(execute=True) as callbacks:
-            with self.assertRaises(RuntimeError):
-                with transaction.atomic():
-                    programmer_envoi_billets(self.reservation)
-                    raise RuntimeError("Transaction interrompue")
+        with (
+            self.captureOnCommitCallbacks(execute=True) as callbacks,
+            self.assertRaises(RuntimeError),
+            transaction.atomic(),
+        ):
+            programmer_envoi_billets(self.reservation)
+            raise RuntimeError("Transaction interrompue")
 
         self.assertEqual(callbacks, [])
         self.assertFalse(EnvoiBillets.objects.exists())
@@ -211,9 +217,8 @@ class EnvoiEmailBilletsTests(TestCase):
         with patch(
             "reservations.emails.EmailMultiAlternatives.send",
             side_effect=SMTPException("mot_de_passe_smtp_factice"),
-        ):
-            with self.assertLogs("reservations.emails", level="WARNING") as journal:
-                self.assertFalse(envoyer_billets(self.reservation.pk))
+        ), self.assertLogs("reservations.emails", level="WARNING") as journal:
+            self.assertFalse(envoyer_billets(self.reservation.pk))
 
         self.reservation.refresh_from_db()
         envoi = EnvoiBillets.objects.get()
@@ -228,9 +233,11 @@ class EnvoiEmailBilletsTests(TestCase):
         self.assertIn("SMTPException", " ".join(journal.output))
 
     def test_service_mail_retournant_zero_signale_echec(self):
-        with patch("reservations.emails.EmailMultiAlternatives.send", return_value=0):
-            with self.assertLogs("reservations.emails", level="WARNING"):
-                self.assertFalse(envoyer_billets(self.reservation.pk))
+        with (
+            patch("reservations.emails.EmailMultiAlternatives.send", return_value=0),
+            self.assertLogs("reservations.emails", level="WARNING"),
+        ):
+            self.assertFalse(envoyer_billets(self.reservation.pk))
 
         self.assertEqual(EnvoiBillets.objects.get().statut, EnvoiBillets.Statut.ECHOUE)
 
@@ -345,9 +352,11 @@ class EnvoiEmailBilletsTests(TestCase):
         self.assertFalse(EnvoiBillets.objects.exists())
 
     def test_echec_relance_affiche_erreur_sans_perdre_billets(self):
-        with patch("reservations.emails.EmailMultiAlternatives.send", side_effect=SMTPException):
-            with self.assertLogs("reservations.emails", level="WARNING"):
-                page = self.client.post(self.url, follow=True)
+        with (
+            patch("reservations.emails.EmailMultiAlternatives.send", side_effect=SMTPException),
+            self.assertLogs("reservations.emails", level="WARNING"),
+        ):
+            page = self.client.post(self.url, follow=True)
 
         self.assertContains(page, "L’envoi de l’email a échoué")
         self.assertContains(page, "Voir mes billets")
@@ -391,9 +400,11 @@ class EmailApresTransactionTests(TransactionTestCase):
 
     def test_panne_apres_confirmation_ne_fait_pas_echouer_paiement_et_se_reprend(self):
         reservation = creer_reservation_email(confirmee=False)
-        with patch("reservations.emails.EmailMultiAlternatives.send", side_effect=SMTPException):
-            with self.assertLogs("reservations.emails", level="WARNING"):
-                traiter_session_checkout("checkout.session.completed", session_payee(reservation))
+        with (
+            patch("reservations.emails.EmailMultiAlternatives.send", side_effect=SMTPException),
+            self.assertLogs("reservations.emails", level="WARNING"),
+        ):
+            traiter_session_checkout("checkout.session.completed", session_payee(reservation))
 
         reservation.refresh_from_db()
         envoi = EnvoiBillets.objects.get()

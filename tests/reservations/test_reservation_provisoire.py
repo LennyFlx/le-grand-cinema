@@ -141,9 +141,14 @@ class ReservationProvisoireTests(DonneesReservationProvisoire, TestCase):
         self.assertNotEqual(reservation.seance_id, nouvelle.seance_id)
 
     def test_echec_associations_annule_toute_la_transaction(self):
-        with patch("reservations.services.ReservationPlace.objects.bulk_create", side_effect=RuntimeError("Échec simulé")):
-            with self.assertRaises(RuntimeError):
-                self.reserver()
+        with (
+            patch(
+                "reservations.services.ReservationPlace.objects.bulk_create",
+                side_effect=RuntimeError("Échec simulé"),
+            ),
+            self.assertRaises(RuntimeError),
+        ):
+            self.reserver()
         self.assertFalse(Reservation.objects.exists())
         self.assertFalse(ReservationPlace.objects.exists())
 

@@ -243,9 +243,11 @@ class WebhookStripeTests(TestCase):
             creer_billet(*args, **kwargs)
             raise RuntimeError("Émission interrompue")
 
-        with patch("reservations.services.Billet.objects.get_or_create", side_effect=interrompre):
-            with self.assertRaises(RuntimeError):
-                self.envoyer()
+        with (
+            patch("reservations.services.Billet.objects.get_or_create", side_effect=interrompre),
+            self.assertRaises(RuntimeError),
+        ):
+            self.envoyer()
 
         self.verifier_en_attente()
         self.assertEqual(self.envoyer().status_code, 200)
