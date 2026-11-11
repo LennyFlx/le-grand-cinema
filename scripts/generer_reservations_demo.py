@@ -2,13 +2,12 @@
 
 import argparse
 import json
-from random import Random
 from collections import defaultdict
 from datetime import datetime, timedelta
 from decimal import Decimal
 from pathlib import Path
+from random import Random
 from zoneinfo import ZoneInfo
-
 
 RACINE = Path(__file__).resolve().parent.parent
 FIXTURES = RACINE / "cinema" / "fixtures"

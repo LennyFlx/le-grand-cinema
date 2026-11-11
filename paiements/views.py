@@ -9,7 +9,13 @@ from django.urls import reverse
 from django.views.decorators.cache import never_cache
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_POST
-from stripe import APIConnectionError, InvalidRequestError, SignatureVerificationError, StripeError, Webhook
+from stripe import (
+    APIConnectionError,
+    InvalidRequestError,
+    SignatureVerificationError,
+    StripeError,
+    Webhook,
+)
 
 from reservations.models import Reservation
 

@@ -15,7 +15,6 @@ from .models import EnvoiBillets, Reservation
 from .pdf import generer_pdf_billets
 from .services import creer_url_absolue, creer_url_billets, obtenir_billets_valides
 
-
 logger = logging.getLogger(__name__)
 DELAI_RELANCE_EMAIL = timedelta(minutes=1)
 

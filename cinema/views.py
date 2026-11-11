@@ -7,8 +7,9 @@ from django.utils.dateparse import parse_date
 from django.views.decorators.cache import never_cache
 from django.views.decorators.http import require_safe
 
-from .models import Film, Participation, Seance
 from reservations.services import obtenir_disponibilites
+
+from .models import Film, Participation, Seance
 from .plan_salle import organiser_plan
 
 

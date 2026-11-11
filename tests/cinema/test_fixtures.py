@@ -8,9 +8,8 @@ from tempfile import TemporaryDirectory
 from django.core.management import call_command
 from django.test import SimpleTestCase, TestCase
 
-from scripts.generer_fixtures_demo import FUSEAU, generer_seances, main
-
 from cinema.models import Film, Genre, Participation, Personne, Place, Salle, Seance
+from scripts.generer_fixtures_demo import FUSEAU, generer_seances, main
 
 
 class SallesInitialesFixtureTests(TestCase):

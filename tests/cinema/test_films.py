@@ -1,4 +1,5 @@
-from datetime import date, datetime, time, timedelta, timezone as datetime_timezone
+from datetime import date, datetime, time, timedelta
+from datetime import timezone as datetime_timezone
 from unittest.mock import patch
 from zoneinfo import ZoneInfo
 

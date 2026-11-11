@@ -6,7 +6,6 @@ from django.utils import timezone
 
 from cinema.models import Film, Place, Salle, Seance
 from cinema.services import enregistrer_place, enregistrer_seance
-
 from reservations.models import Billet, Reservation, ReservationPlace
 
 

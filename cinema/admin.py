@@ -1,15 +1,15 @@
 from django.contrib import admin, messages
 from django.contrib.admin.helpers import ACTION_CHECKBOX_NAME
-from django.template.response import TemplateResponse
-
 from django.core.exceptions import ValidationError
 from django.db import transaction
 from django.db.models import Count
+from django.template.response import TemplateResponse
 from django.utils import timezone
+
+from reservations.services import compter_places_disponibles
 
 from .forms import SeanceAdminForm
 from .models import Film, Genre, Participation, Personne, Seance
-from reservations.services import compter_places_disponibles
 from .services import annuler_seance, enregistrer_seance
 
 

@@ -17,7 +17,6 @@ from django.utils import timezone
 from cinema.models import Film, Place, Salle, Seance
 from cinema.services import annuler_seance
 from paiements.models import Paiement
-
 from reservations.emails import envoyer_billets
 from reservations.models import Billet, Reservation, ReservationPlace
 from reservations.qr_codes import creer_url_controle_billet

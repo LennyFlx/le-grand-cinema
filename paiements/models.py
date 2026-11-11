@@ -1,6 +1,7 @@
 from django.db import models
 from django.db.models import Q
 
+
 class Paiement(models.Model):
     class Statut(models.TextChoices):
         EN_ATTENTE = "en_attente", "En attente"

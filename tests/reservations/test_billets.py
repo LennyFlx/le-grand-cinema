@@ -8,7 +8,6 @@ from django.utils import timezone
 from cinema.models import Film, Place, Salle, Seance
 from cinema.services import annuler_seance
 from paiements.models import Paiement
-
 from reservations.models import Billet, Reservation, ReservationPlace
 from reservations.services import generer_billets
 

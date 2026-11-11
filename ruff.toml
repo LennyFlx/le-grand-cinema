@@ -1,0 +1,11 @@
+
+# Configuration Ruff — Le Grand Cinéma
+
+# Compatibilité avec Python sur le VPS
+target-version = "py312"
+
+# Longueur de ligne de référence
+line-length = 100
+
+# Ne pas analyser les migrations générées par Django
+extend-exclude = ["**/migrations/**"]

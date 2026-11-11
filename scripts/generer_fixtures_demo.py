@@ -6,7 +6,6 @@ from datetime import date, datetime, time, timedelta
 from pathlib import Path
 from zoneinfo import ZoneInfo
 
-
 RACINE = Path(__file__).resolve().parent.parent
 FIXTURES = RACINE / "cinema" / "fixtures"
 FUSEAU = ZoneInfo("Europe/Paris")

@@ -6,8 +6,8 @@ from django.test import TestCase
 from django.utils import timezone
 
 from cinema.models import Film, Place, Salle, Seance
-from reservations.models import Reservation, ReservationPlace
 from cinema.services import enregistrer_place, enregistrer_salle, enregistrer_seance
+from reservations.models import Reservation, ReservationPlace
 
 
 class ProgrammationTests(TestCase):
@@ -161,9 +161,10 @@ class CreationSeanceAdminTests(TestCase):
         return donnees
 
     def test_creation_calcule_fin_et_conserve_places_physiques(self):
-        from django.contrib.messages import get_messages
-        from cinema.admin import SeanceAdmin
         from django.contrib import admin
+        from django.contrib.messages import get_messages
+
+        from cinema.admin import SeanceAdmin
 
         response = self.client.post(self.url, self.donnees())
         self.assertEqual(response.status_code, 302)
