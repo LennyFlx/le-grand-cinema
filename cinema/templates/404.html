@@ -1,0 +1,26 @@
+
+{% extends "cinema/base.html" %}
+
+{% block title %}Page introuvable — Le Grand Cinéma{% endblock %}
+
+{% block content %}
+<section class="mx-auto max-w-2xl py-16 text-center">
+    <p class="text-8xl font-bold text-red-700">
+        404
+    </p>
+
+    <h1 class="mt-6 text-3xl font-bold text-zinc-900">
+        Oups, cette séance n'est pas au programme !
+    </h1>
+
+    <p class="mt-4 text-lg text-zinc-600">
+        La page que vous recherchez n'existe pas
+        ou n'est plus disponible.
+    </p>
+
+    <a href="{% url 'cinema:films' %}"
+       class="mt-8 inline-flex min-h-11 items-center justify-center rounded-md bg-yellow-400 px-6 py-3 font-semibold text-zinc-950 hover:bg-yellow-300">
+        Retour aux films à l'affiche
+    </a>
+</section>
+{% endblock %}
