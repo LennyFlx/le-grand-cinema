@@ -1,4 +1,4 @@
-# le-grand-cinemaa# Le Grand Cinéma
+# Le Grand Cinéma
 
 Application web de réservation de places de cinéma, développée avec **Django** dans le cadre d'un projet d'évaluation en développement d'applications Python. Elle permet aux spectateurs de consulter la programmation et de réserver leurs places en ligne, sans créer de compte.
 
