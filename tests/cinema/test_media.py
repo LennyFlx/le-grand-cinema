@@ -20,19 +20,23 @@ class MediaDevelopmentTests(SimpleTestCase):
             affiche = Path(dossier) / "affiches" / "test.webp"
             affiche.parent.mkdir()
             affiche.write_bytes(b"image-de-test")
-            with self.settings(DEBUG=True, MEDIA_ROOT=dossier, MEDIA_URL="/media/"):
-                with self.settings(ROOT_URLCONF=self.urlconf()):
-                    response = self.client.get("/media/affiches/test.webp")
-                    self.assertEqual(response.status_code, 200)
-                    try:
-                        self.assertEqual(b"".join(response.streaming_content), b"image-de-test")
-                    finally:
-                        response.close()
+            with (
+                self.settings(DEBUG=True, MEDIA_ROOT=dossier, MEDIA_URL="/media/"),
+                self.settings(ROOT_URLCONF=self.urlconf()),
+            ):
+                response = self.client.get("/media/affiches/test.webp")
+                self.assertEqual(response.status_code, 200)
+                try:
+                   self.assertEqual(b"".join(response.streaming_content), b"image-de-test")
+                finally:
+                   response.close()
 
     def test_media_non_servi_quand_debug_est_desactive(self):
         with TemporaryDirectory() as dossier:
             affiche = Path(dossier) / "test.webp"
             affiche.write_bytes(b"image-de-test")
-            with self.settings(DEBUG=False, MEDIA_ROOT=dossier, MEDIA_URL="/media/"):
-                with self.settings(ROOT_URLCONF=self.urlconf()):
-                    self.assertEqual(self.client.get("/media/test.webp").status_code, 404)
+            with (
+                self.settings(DEBUG=False, MEDIA_ROOT=dossier, MEDIA_URL="/media/"),
+                self.settings(ROOT_URLCONF=self.urlconf()),
+            ):
+                self.assertEqual(self.client.get("/media/test.webp").status_code, 404)

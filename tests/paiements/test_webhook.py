@@ -13,12 +13,13 @@ from django.utils import timezone
 
 from cinema.models import Film, Place, Salle, Seance
 from cinema.services import annuler_seance
+from paiements.models import Paiement
 from reservations.models import Billet, EnvoiBillets, Reservation, ReservationPlace
 from reservations.services import (
-    compter_places_disponibles, creer_reservation_provisoire, expirer_reservations,
+    compter_places_disponibles,
+    creer_reservation_provisoire,
+    expirer_reservations,
 )
-
-from paiements.models import Paiement
 
 SECRET_WEBHOOK = "whsec_test_webhook"
 
@@ -242,9 +243,11 @@ class WebhookStripeTests(TestCase):
             creer_billet(*args, **kwargs)
             raise RuntimeError("Émission interrompue")
 
-        with patch("reservations.services.Billet.objects.get_or_create", side_effect=interrompre):
-            with self.assertRaises(RuntimeError):
-                self.envoyer()
+        with (
+            patch("reservations.services.Billet.objects.get_or_create", side_effect=interrompre),
+            self.assertRaises(RuntimeError),
+        ):
+            self.envoyer()
 
         self.verifier_en_attente()
         self.assertEqual(self.envoyer().status_code, 200)

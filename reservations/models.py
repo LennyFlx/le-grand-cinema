@@ -6,6 +6,7 @@ from django.db.models import Q
 
 from cinema.models import Place
 
+
 class Reservation(models.Model):
     class Statut(models.TextChoices):
         EN_ATTENTE = "en_attente", "En attente"

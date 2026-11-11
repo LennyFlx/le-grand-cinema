@@ -8,9 +8,9 @@ from django.urls import reverse
 from django.utils import timezone
 
 from cinema.models import Film, Place, Salle, Seance
+from cinema.services import annuler_seance, enregistrer_seance
 from paiements.models import Paiement
 from reservations.models import Billet, Reservation, ReservationPlace
-from cinema.services import annuler_seance, enregistrer_seance
 
 
 class ModificationAnnulationSeanceTests(TestCase):
@@ -95,7 +95,7 @@ class ModificationAnnulationSeanceTests(TestCase):
         self.assertEqual(self.seance.debut, self.debut)
 
     def test_confirmation_sans_effet_avant_validation(self):
-        reservation, billet, paiement = self.reserver()
+        reservation, _, _ = self.reserver()
         response = self.action()
         self.assertContains(response, reservation.email)
         self.assertContains(response, "manuellement")

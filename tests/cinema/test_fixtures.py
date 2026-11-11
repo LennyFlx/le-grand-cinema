@@ -2,15 +2,15 @@ import json
 from contextlib import redirect_stderr, redirect_stdout
 from datetime import date, datetime, timedelta
 from io import StringIO
+from itertools import pairwise
 from pathlib import Path
 from tempfile import TemporaryDirectory
 
 from django.core.management import call_command
 from django.test import SimpleTestCase, TestCase
 
-from scripts.generer_fixtures_demo import FUSEAU, generer_seances, main
-
 from cinema.models import Film, Genre, Participation, Personne, Place, Salle, Seance
+from scripts.generer_fixtures_demo import FUSEAU, generer_seances, main
 
 
 class SallesInitialesFixtureTests(TestCase):
@@ -105,7 +105,7 @@ class GenerationSeancesFixtureTests(TestCase):
                 self.assertEqual(seance.fin - seance.debut, timedelta(minutes=seance.film.duree))
                 self.assertEqual(seance.statut, Seance.Statut.PROGRAMMEE)
                 self.assertIn(seance.debut.astimezone(FUSEAU).date(), (date(2027, 3, 27), date(2027, 3, 28), date(2027, 3, 29)))
-            for premiere, suivante in zip(precedentes, precedentes[1:]):
+            for premiere, suivante in pairwise(precedentes):
                 self.assertGreaterEqual(suivante.debut - premiere.fin, timedelta(minutes=30))
 
 

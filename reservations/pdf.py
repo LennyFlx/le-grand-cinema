@@ -18,7 +18,6 @@ from reportlab.platypus import KeepInFrame, PageBreak, Paragraph, SimpleDocTempl
 
 from .qr_codes import creer_qr_code_billet
 
-
 # ReportLab partage des ressources internes : une génération à la fois par processus.
 _VERROU_PDF = Lock()
 _POLICES = Path(reportlab.__file__).parent / "fonts"

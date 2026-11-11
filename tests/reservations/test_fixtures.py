@@ -46,7 +46,7 @@ class ReservationsDemoFixtureTests(TestCase):
         self.assertFalse(ReservationPlace.objects.exclude(place__salle_id=F("reservation__seance__salle_id")).exists())
         for reservation in Reservation.objects.prefetch_related("places"):
             self.assertEqual(reservation.montant_total,
-                             sum((place.prix_unitaire for place in reservation.places.all()), Decimal("0")))
+                             sum((place.prix_unitaire for place in reservation.places.all()), Decimal(0)))
             self.assertLess(reservation.date_creation, reservation.date_expiration)
         libre = Seance.objects.get(pk=100000)
         partielle = Seance.objects.get(pk=100001)

@@ -1,4 +1,4 @@
-from datetime import date, datetime, time, timedelta, timezone as datetime_timezone
+from datetime import UTC, date, datetime, time, timedelta
 from unittest.mock import patch
 from zoneinfo import ZoneInfo
 
@@ -134,7 +134,7 @@ class FilmsALAfficheTests(TestCase):
         film = Film.objects.create(titre="Séances de minuit", duree=30)
         minuit = self.programmer(film, jours=1, heure=0)
         self.programmer(film, jours=2, heure=0)
-        self.assertEqual(minuit.debut.astimezone(datetime_timezone.utc).date(), self.aujourd_hui)
+        self.assertEqual(minuit.debut.astimezone(UTC).date(), self.aujourd_hui)
         response = self.consulter(jours=1)
         self.assertEqual(response.context["films"][0].seances_du_jour, [minuit])
         self.assertContains(response, ">00:00</time>")

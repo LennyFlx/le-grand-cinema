@@ -9,11 +9,10 @@ from django.utils import timezone
 from stripe import APIConnectionError, InvalidRequestError
 
 from cinema.models import Film, Place, Salle, Seance
-from reservations.models import Billet, EnvoiBillets, Reservation, ReservationPlace
-from reservations.services import compter_places_disponibles
-
 from paiements.models import Paiement
 from paiements.services import demarrer_paiement, traiter_session_checkout
+from reservations.models import Billet, EnvoiBillets, Reservation, ReservationPlace
+from reservations.services import compter_places_disponibles
 
 
 @override_settings(STRIPE_SECRET_KEY="sk_test_exemple", STRIPE_WEBHOOK_SECRET="whsec_exemple", ALLOWED_HOSTS=["testserver", "localhost"])

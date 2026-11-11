@@ -18,15 +18,21 @@ from cinema.models import Seance
 from cinema.plan_salle import organiser_plan
 from paiements.models import Paiement
 from paiements.services import DUREE_PAIEMENT_CHECKOUT, actualiser_paiement
+
 from .emails import envoyer_billets
 from .forms import ReservationProvisoireForm, SelectionPlacesForm
 from .models import Billet, EnvoiBillets, Reservation
 from .pdf import generer_pdf_billets
 from .qr_codes import creer_qr_code_billet
 from .services import (
-    SALT_LIEN_BILLETS, creer_reservation_provisoire, creer_url_billets,
-    obtenir_billets_valides, obtenir_disponibilites,
-    reservations_a_expirer, reservations_provisoires_actives, verifier_validite_billet,
+    SALT_LIEN_BILLETS,
+    creer_reservation_provisoire,
+    creer_url_billets,
+    obtenir_billets_valides,
+    obtenir_disponibilites,
+    reservations_a_expirer,
+    reservations_provisoires_actives,
+    verifier_validite_billet,
 )
 
 

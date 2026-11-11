@@ -19,11 +19,14 @@ from django.utils.formats import date_format
 from cinema.models import Film, Place, Salle, Seance
 from paiements.models import Paiement
 from paiements.services import traiter_session_checkout
-
 from reservations.models import Billet, EnvoiBillets, Reservation, ReservationPlace
 from reservations.services import (
-    annuler_reservation, compter_places_disponibles, creer_reservation_provisoire,
-    creer_url_billets, generer_billets, verifier_validite_billet,
+    annuler_reservation,
+    compter_places_disponibles,
+    creer_reservation_provisoire,
+    creer_url_billets,
+    generer_billets,
+    verifier_validite_billet,
 )
 
 
@@ -160,9 +163,8 @@ class AnnulationReservationTests(DonneesAnnulationReservation, TestCase):
         self.confirmer()
         with patch(
             "reservations.services.Billet.objects.filter", side_effect=RuntimeError("Échec simulé"),
-        ):
-            with self.assertRaises(RuntimeError):
-                annuler_reservation(self.reservation)
+        ), self.assertRaises(RuntimeError):
+            annuler_reservation(self.reservation)
         self.reservation.refresh_from_db()
         self.billet.refresh_from_db()
         self.assertEqual(self.reservation.statut, Reservation.Statut.CONFIRMEE)
@@ -354,9 +356,11 @@ class AnnulationReservationAdminTests(DonneesAnnulationReservation, TestCase):
 
     def test_echec_journalisation_annule_aussi_la_modification(self):
         modele_admin = admin.site._registry[Reservation]
-        with patch.object(modele_admin, "log_change", side_effect=RuntimeError("Échec simulé")):
-            with self.assertRaises(RuntimeError):
-                self.client.post(self.url, {"confirmer": "oui"})
+        with (
+            patch.object(modele_admin, "log_change", side_effect=RuntimeError("Échec simulé")),
+            self.assertRaises(RuntimeError),
+        ):
+            self.client.post(self.url, {"confirmer": "oui"})
         self.reservation.refresh_from_db()
         self.assertEqual(self.reservation.statut, Reservation.Statut.EN_ATTENTE)
         self.assertEqual(compter_places_disponibles(self.seance), 1)

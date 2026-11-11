@@ -12,7 +12,6 @@ from django.utils.formats import date_format
 
 from cinema.models import Film, Place, Salle, Seance
 from paiements.models import Paiement
-
 from reservations.models import Billet, EnvoiBillets, Reservation, ReservationPlace
 
 
