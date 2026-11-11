@@ -9,3 +9,12 @@ line-length = 100
 
 # Ne pas analyser les migrations générées par Django
 extend-exclude = ["**/migrations/**"]
+
+
+# Exceptions RUF012 pour les déclarations Django
+[lint.per-file-ignores]
+"cinema/models.py" = ["RUF012"]
+"paiements/models.py" = ["RUF012"]
+"reservations/models.py" = ["RUF012"]
+"tests/cinema/test_fixtures.py" = ["RUF012"]
+"tests/reservations/test_fixtures.py" = ["RUF012"]

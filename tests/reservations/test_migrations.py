@@ -10,7 +10,11 @@ from django.utils import timezone
 
 
 class SeparationApplicationsMigrationTests(TransactionTestCase):
-    ancienne = [("cinema", "0003_supprimer_date_naissance_personne"), ("reservations", None), ("paiements", None)]
+    ancienne = (
+        ("cinema", "0003_supprimer_date_naissance_personne"),
+        ("reservations", None),
+        ("paiements", None),
+    )
 
     def migrer(self, cibles):
         executor = MigrationExecutor(connection)

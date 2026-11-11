@@ -29,7 +29,7 @@ def programmer_envoi_billets(reservation):
 def _envoyer_apres_confirmation(reservation_id):
     try:
         envoyer_billets(reservation_id)
-    except Exception as erreur:
+    except Exception as erreur:  # noqa: BLE001 - Isoler l'échec email du paiement
         # Le paiement est acquis ; les détails de connexion et le lien restent hors des logs.
         logger.warning(
             "Email billets non envoyé : reservation=%s type=%s",
@@ -94,7 +94,7 @@ def envoyer_billets(reservation_id, *, renvoi=False):
         )
         if message.send(fail_silently=False) != 1:
             raise RuntimeError("Le service mail n’a pas accepté le message.")
-    except Exception as erreur:
+    except Exception as erreur:  # noqa: BLE001 - Enregistrer tout échec d'envoi
         tentative.update(statut=EnvoiBillets.Statut.ECHOUE)
         logger.warning(
             "Échec email billets : reservation=%s type=%s",
