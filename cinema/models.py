@@ -65,7 +65,11 @@ class Film(models.Model):
     description = models.TextField(blank=True)
     duree = models.PositiveIntegerField(help_text="Durée en minutes")
     date_sortie = models.DateField(null=True, blank=True)
-    affiche = models.CharField(max_length=255, blank=True)
+    affiche = models.ImageField(
+        upload_to="affiches/",
+        blank=True,
+        max_length=255,
+    )
     genres = models.ManyToManyField(Genre, related_name="films", blank=True)
     actif = models.BooleanField(default=True)
 
