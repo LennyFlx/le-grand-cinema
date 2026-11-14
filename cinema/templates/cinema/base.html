@@ -23,7 +23,10 @@
                 {% if reservation_a_reprendre %}
                     <a class="inline-flex min-h-11 items-center justify-center rounded-md border border-yellow-400 px-4 py-2.5 text-sm font-semibold text-yellow-300 hover:bg-zinc-800 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-yellow-400" href="{% url 'reservations:detail_reservation' reservation_a_reprendre.pk %}">Reprendre ma réservation</a>
                 {% endif %}
-                <a class="inline-flex min-h-11 items-center justify-center rounded-md bg-yellow-400 px-5 py-2.5 text-sm font-semibold text-zinc-950 hover:bg-yellow-300 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-yellow-400" href="{% url 'cinema:films' %}#films">À l'affiche</a>
+                <a class="inline-flex min-h-11 items-center justify-center rounded-md border border-yellow-400 px-4 py-2.5 text-sm font-semibold text-yellow-300 hover:bg-zinc-800 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-yellow-400"
+                    href="{% url 'admin:index' %}">
+                    Connexion
+                </a>
             </nav>
         </div>
     </header>
