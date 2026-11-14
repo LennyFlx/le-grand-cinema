@@ -1,0 +1,190 @@
+openapi: 3.0.3
+info:
+  title: Le Grand Cinéma - Intégration des paiements Stripe
+  version: 1.0.0
+  description: |
+    Documentation des deux points d'entrée Django associés à Stripe Checkout.
+    L'application crée une session de paiement auprès de Stripe, puis reçoit
+    les événements Stripe par webhook pour mettre à jour les paiements et les
+    réservations.
+
+    Cette documentation décrit le comportement des vues Django ; elle ne
+    remplace pas la documentation de l'API Stripe.
+
+    **Attention :** ces routes ne constituent pas une API JSON publique.
+    La route de démarrage du paiement est destinée à un formulaire du site.
+    Le webhook est destiné exclusivement aux notifications signées de Stripe.
+servers:
+  - url: http://127.0.0.1:8000
+    description: Serveur Django local (exemple)
+tags:
+  - name: Paiement
+    description: Démarrage du paiement par le navigateur.
+  - name: Webhook Stripe
+    description: Réception et validation des événements Stripe.
+paths:
+  /paiements/reservations/{pk}/payer/:
+    post:
+      tags:
+        - Paiement
+      operationId: payerReservation
+      summary: Démarrer le paiement d'une réservation
+      description: |
+        Démarre ou reprend une session Stripe Checkout pour une réservation
+        provisoire appartenant à la session Django courante.
+
+        L'identifiant de réservation doit correspondre à la valeur
+        `reservation_provisoire_id` enregistrée en session Django.
+        Le paiement doit aussi satisfaire aux règles métier de disponibilité,
+        de validité de la réservation et de la séance.
+
+        La requête POST est protégée contre les attaques CSRF : un formulaire
+        Django transmet normalement `csrfmiddlewaretoken`, ou un client peut
+        utiliser l'en-tête `X-CSRFToken` selon la configuration Django.
+
+        Si Stripe Checkout est disponible, le navigateur est redirigé vers
+        Stripe (HTTP 303). Sinon, la vue redirige vers la page de détail de
+        la réservation (HTTP 302), avec un message Django dans les cas d'erreur
+        gérés. La vue ne renvoie pas de JSON.
+      security:
+        - djangoSession: []
+      parameters:
+        - name: pk
+          in: path
+          required: true
+          description: Identifiant numérique de la réservation provisoire.
+          schema:
+            type: integer
+            format: int64
+            minimum: 1
+          example: 42
+      requestBody:
+        required: false
+        description: |
+          Aucun champ métier n'est lu dans le corps de la requête.
+          Lors d'un envoi depuis un formulaire HTML Django, inclure le jeton
+          CSRF dans `csrfmiddlewaretoken`. Une transmission dans l'en-tête
+          `X-CSRFToken` est également possible.
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+              properties:
+                csrfmiddlewaretoken:
+                  type: string
+                  description: Jeton CSRF généré par Django.
+      responses:
+        '303':
+          description: Session Checkout prête ; redirection vers la page de paiement Stripe.
+          headers:
+            Location:
+              description: URL de la session Stripe Checkout.
+              schema:
+                type: string
+                format: uri
+        '302':
+          description: |
+            Redirection vers la page de détail de la réservation si le
+            paiement ne peut pas être ouvert, a expiré ou si un incident
+            Stripe/configuration est géré. Un message Django peut expliquer
+            le motif de l'échec.
+          headers:
+            Location:
+              description: URL de la page de détail de la réservation.
+              schema:
+                type: string
+        '403':
+          description: Échec de la validation CSRF (middleware Django).
+        '404':
+          description: Réservation inexistante ou non liée à la session Django courante.
+        '405':
+          description: Méthode HTTP non autorisée (POST uniquement).
+
+  /paiements/webhook/:
+    post:
+      tags:
+        - Webhook Stripe
+      operationId: recevoirWebhookStripe
+      summary: Recevoir une notification Stripe signée
+      description: |
+        Reçoit le corps brut d'un événement Stripe et vérifie sa signature
+        à l'aide de l'en-tête `Stripe-Signature` et du secret
+        `STRIPE_WEBHOOK_SECRET` configuré côté serveur.
+
+        Les événements `checkout.session.completed` et
+        `checkout.session.expired` sont traités pour mettre à jour les
+        paiements et les réservations, sous réserve de contrôles de cohérence.
+        Les autres types d'événements valides sont acquittés sans traitement.
+
+        Cette route est exemptée de la protection CSRF Django, puisque
+        l'authenticité de la requête est vérifiée par la signature Stripe.
+        Elle ne requiert pas de session utilisateur Django.
+      security:
+        - stripeSignature: []
+      requestBody:
+        required: true
+        description: |
+          Événement JSON émis par Stripe. La vérification de signature
+          s'effectue sur les octets du corps HTTP d'origine ; le contenu
+          ne doit pas être modifié avant cette vérification.
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - id
+                - type
+                - data
+              properties:
+                id:
+                  type: string
+                  description: Identifiant de l'événement Stripe.
+                  example: evt_exemple
+                type:
+                  type: string
+                  description: Type de l'événement.
+                  example: checkout.session.completed
+                data:
+                  type: object
+                  required:
+                    - object
+                  properties:
+                    object:
+                      type: object
+                      description: Objet Stripe Checkout Session contenant les informations de paiement.
+                      additionalProperties: true
+                  additionalProperties: true
+              additionalProperties: true
+      responses:
+        '200':
+          description: |
+            Événement authentifié et accepté. Les événements reconnus sont
+            traités, les autres sont ignorés. Réponse sans corps.
+        '400':
+          description: |
+            Corps ou signature Stripe invalide, ou incohérence métier
+            identifiée lors du traitement d'une session Checkout.
+        '405':
+          description: Méthode HTTP non autorisée (POST uniquement).
+        '503':
+          description: Secret du webhook Stripe non configuré côté serveur.
+
+components:
+  securitySchemes:
+    djangoSession:
+      type: apiKey
+      in: cookie
+      name: sessionid
+      description: |
+        Cookie de session Django (nom par défaut ; personnalisable via
+        `SESSION_COOKIE_NAME`). La session doit contenir
+        `reservation_provisoire_id` égal au paramètre `pk`.
+        Une protection CSRF supplémentaire s'applique à cette opération.
+    stripeSignature:
+      type: apiKey
+      in: header
+      name: Stripe-Signature
+      description: |
+        Signature générée par Stripe et validée côté Django avec le secret
+        `STRIPE_WEBHOOK_SECRET`. Il ne s'agit pas d'un jeton statique que
+        l'on peut renseigner pour tester arbitrairement l'API.
