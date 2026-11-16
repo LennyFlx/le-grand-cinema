@@ -1,4 +1,4 @@
-# US-14 — Consulter les taux de remplissage des séances
+# US-15 — Consulter les taux de remplissage des séances
 
 Dans Django Admin, ouvrir **Cinéma → Séances → Taux de remplissage**.
 Adresse : `/admin/cinema/seance/statistiques/`.

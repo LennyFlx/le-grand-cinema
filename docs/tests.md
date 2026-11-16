@@ -93,7 +93,7 @@ Ces commandes ne nécessitent pas le lancement de `runserver`. Elles doivent êt
 
 ### 4.3 Graphiques d'affluence
 
-Les tests dédiés de l'US-15 réutilisent les données de test de l'US-14 et se lancent avec :
+Les tests dédiés de l'US-16 réutilisent les données de test de l'US-15 et se lancent avec :
 
 ```powershell
 python manage.py test tests.cinema.test_affluence tests.cinema.test_statistiques --noinput
