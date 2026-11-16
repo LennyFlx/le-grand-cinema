@@ -1,12 +1,12 @@
-# US-15 — Identifier les périodes de forte affluence
+# US-16 — Identifier les périodes de forte affluence
 
 Dans Django Admin, ouvrir **Cinéma → Séances → Affluence**, ou utiliser la
-navigation **Statistiques** depuis la page de remplissage (US-14).
+navigation **Statistiques** depuis la page de remplissage (US-15).
 Adresse : `/admin/cinema/seance/statistiques/affluence/`.
 
 ## Accès et données
 
-L'accès reprend les règles de l'US-14 : compte actif du personnel, avec les deux
+L'accès reprend les règles de l'US-15 : compte actif du personnel, avec les deux
 permissions `cinema.view_seance` et `reservations.view_reservation`.
 Un superutilisateur actif du personnel y a également accès. Une permission de
 modification seule ne suffit pas. GET et HEAD sont autorisés ; aucune donnée
@@ -14,13 +14,13 @@ métier n'est modifiée et les réponses ne sont pas mises en cache.
 
 Les statistiques utilisent uniquement les réservations **confirmées**. Les
 réservations en attente, expirées ou annulées sont exclues. Le compteur partagé
-avec l'US-14 décompte les sièges physiques distincts **par séance**, sans joindre
+avec l'US-15 décompte les sièges physiques distincts **par séance**, sans joindre
 les paiements ni les billets. Le même fauteuil réservé pour deux séances compte
 bien deux fois dans le total quotidien.
 
 Les dates sont celles du **début des séances**, dans le fuseau Django courant
 (`Europe/Paris` par défaut), et non celles de création ou de paiement des réservations.
-Comme dans l'US-14, les séances terminées ou annulées et les films, salles ou places
+Comme dans l'US-15, les séances terminées ou annulées et les films, salles ou places
 désactivés restent dans l'historique ; seules les réservations encore confirmées
 contribuent au compteur. Les chiffres représentent donc l'état actuel des réservations,
 pas un historique figé, un contrôle de présence physique ou une prévision de demande.
@@ -76,7 +76,7 @@ bibliothèque ne se charge pas, un message renvoie au tableau.
 
 ## Organisation technique
 
-- `cinema/statistiques.py` partage le queryset filtré et annoté de l'US-14.
+- `cinema/statistiques.py` partage le queryset filtré et annoté de l'US-15.
   L'ORM PostgreSQL agrège ensuite les compteurs par date locale de séance.
 - Deux requêtes de calcul par période : série quotidienne et classement des
   séances. Quatre en comparaison. `select_related` charge films et salles pour

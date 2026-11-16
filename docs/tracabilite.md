@@ -18,6 +18,9 @@ Les liens renvoient directement aux éléments d'origine.
 | [US-11 - Modifier ou annuler une séance](https://trello.com/c/HXw8WVSy) | `feature/modification-annulation-seance` | [#8](https://github.com/LennyFlx/le-grand-cinema/pull/8) |
 | [US-12 - Consulter les réservations](https://trello.com/c/2SSxIIOi) | `feature/consultation-reservations` | [#19](https://github.com/LennyFlx/le-grand-cinema/pull/19) |
 | [US-13 - Annuler une réservation](https://trello.com/c/Fh4y0L7A) | `feature/annulation-reservation` | [#20](https://github.com/LennyFlx/le-grand-cinema/pull/20) |
+| [US-14 - Se connecter à l'espace administrateur](https://trello.com/c/xsUb4u8m/) | `feat/acces-espace-administration` | [#32](https://github.com/LennyFlx/le-grand-cinema/pull/32) |
+| [US-15 - Consulter les taux de remplissage des séances](https://trello.com/c/tDoruNip) | `feature/statistiques-remplissage` | [#35](https://github.com/LennyFlx/le-grand-cinema/pull/35) |
+| [US-16 - Identifier les périodes de forte affluence](https://trello.com/c/fVEKdgJE) | `feature/analyse-affluence` | [#36](https://github.com/LennyFlx/le-grand-cinema/pull/36) |
 
 ## Précisions
 
