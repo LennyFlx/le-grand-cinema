@@ -1,0 +1,15 @@
+.statistiques-indicateurs,
+.statistiques-classements {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem 2rem;
+  padding: 1rem;
+}
+.statistiques-indicateurs p { flex: 1 1 14rem; margin: 0; }
+.statistiques-graphique { position: relative; height: 22rem; margin: 1rem; }
+.statistiques-tableau { max-width: 100%; overflow-x: auto; }
+.statistiques-tableau table { width: 100%; }
+.statistiques-tableau caption { text-align: left; padding: 0.75rem; font-weight: bold; }
+.statistiques-classements > div { flex: 1 1 22rem; }
+details { padding: 1rem; }
+summary { cursor: pointer; }

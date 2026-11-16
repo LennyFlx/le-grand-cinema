@@ -1,3 +1,5 @@
+from datetime import timedelta
+
 from django.contrib import admin, messages
 from django.contrib.admin.helpers import ACTION_CHECKBOX_NAME
 from django.core.exceptions import PermissionDenied, ValidationError
@@ -11,10 +13,10 @@ from django.views.decorators.http import require_safe
 
 from reservations.services import compter_places_disponibles
 
-from .forms import SeanceAdminForm, StatistiquesRemplissageForm
+from .forms import SeanceAdminForm, StatistiquesAffluenceForm, StatistiquesRemplissageForm
 from .models import Film, Genre, Participation, Personne, Seance
 from .services import annuler_seance, enregistrer_seance
-from .statistiques import obtenir_statistiques_remplissage
+from .statistiques import obtenir_statistiques_affluence, obtenir_statistiques_remplissage
 
 
 @admin.register(Personne)
@@ -88,6 +90,11 @@ class SeanceAdmin(admin.ModelAdmin):
     def get_urls(self):
         return [
             path(
+                "statistiques/affluence/",
+                self.admin_site.admin_view(require_safe(self.statistiques_affluence)),
+                name="cinema_seance_affluence",
+            ),
+            path(
                 "statistiques/",
                 self.admin_site.admin_view(require_safe(self.statistiques_remplissage)),
                 name="cinema_seance_statistiques",
@@ -131,6 +138,35 @@ class SeanceAdmin(admin.ModelAdmin):
             statut = 400
         return TemplateResponse(
             request, "admin/cinema/seance/statistiques.html", contexte, status=statut,
+        )
+
+    def statistiques_affluence(self, request):
+        if not self.has_statistiques_permission(request):
+            raise PermissionDenied
+        filtres = request.GET.copy()
+        if "date_debut" not in filtres and "date_fin" not in filtres:
+            aujourd_hui = timezone.localdate()
+            filtres["date_debut"] = (aujourd_hui - timedelta(days=29)).isoformat()
+            filtres["date_fin"] = aujourd_hui.isoformat()
+        formulaire = StatistiquesAffluenceForm(filtres)
+        contexte = {
+            **self.admin_site.each_context(request),
+            "title": "Périodes de forte affluence",
+            "opts": self.model._meta,
+            "formulaire": formulaire,
+        }
+        statut = 200
+        if formulaire.is_valid():
+            statistiques = obtenir_statistiques_affluence(**formulaire.cleaned_data)
+            contexte.update(statistiques)
+            contexte["donnees_graphiques"] = {
+                "principale": statistiques["principale"]["jours"],
+                "reference": statistiques["reference"]["jours"] if statistiques["reference"] else [],
+            }
+        else:
+            statut = 400
+        return TemplateResponse(
+            request, "admin/cinema/seance/affluence.html", contexte, status=statut,
         )
 
     @admin.display(description="Places disponibles")

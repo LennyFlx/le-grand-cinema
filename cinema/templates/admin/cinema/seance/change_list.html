@@ -3,6 +3,7 @@
 {% block object-tools-items %}
   {% if peut_consulter_statistiques %}
     <li><a href="{% url 'admin:cinema_seance_statistiques' %}">Taux de remplissage</a></li>
+    <li><a href="{% url 'admin:cinema_seance_affluence' %}">Affluence</a></li>
   {% endif %}
   {{ block.super }}
 {% endblock %}

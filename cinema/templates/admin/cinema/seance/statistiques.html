@@ -18,6 +18,7 @@
 
 {% block content %}
   <div id="content-main">
+    {% include "admin/cinema/seance/_navigation_statistiques.html" with active="remplissage" %}
     <p>Les places comptabilisées appartiennent uniquement à des réservations confirmées.
       Les dates portent sur le début des séances, bornes incluses, en heure locale.</p>
     <form method="get">
