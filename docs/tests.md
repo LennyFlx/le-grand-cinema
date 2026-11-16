@@ -31,6 +31,8 @@ Les tests vérifient notamment :
 - Les contraintes de programmation : horaires, chevauchements, salles et films inactifs.
 - La création, la modification et l'annulation des séances dans l'administration.
 - La génération du plan de salle et le chargement des fixtures.
+- Les statistiques de remplissage : sièges confirmés distincts, capacités et taux pondéré,
+  filtres par dates locales, permissions, pagination et absence de données.
 
 ### 3.2 Réservations et billets — `tests/reservations/`
 

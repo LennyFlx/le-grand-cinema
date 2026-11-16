@@ -11,6 +11,7 @@ Application web de réservation de places de cinéma, développée avec **Django
 - Génération de billets numériques (**PDF et QR code**) et envoi par e-mail.
 - Consultation des billets à partir d'un lien personnel signé et contrôle par le personnel autorisé.
 - Administration des films, des séances et des réservations via Django Admin.
+- Statistiques de remplissage des séances, avec filtres et synthèse pondérée dans Django Admin.
 
 ## Technologies
 
@@ -130,6 +131,7 @@ Après la validation du paiement en mode test, un e-mail de confirmation contena
 - [Architecture technique](docs/architecture.md)
 - [Guide de déploiement](docs/deploiement.md)
 - [Stratégie de tests](docs/tests.md)
+- [Statistiques de remplissage des séances](docs/statistiques-remplissage.md)
 - [Tests de performance k6](docs/tests-performance.md)
 - [Modélisation des données](docs/modele-donnees.md)
 - [Workflow Git](docs/git-workflow.md)

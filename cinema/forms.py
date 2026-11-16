@@ -44,3 +44,32 @@ class SeanceAdminForm(forms.ModelForm):
         if film and cleaned_data.get("debut"):
             self.instance.fin = debut + timedelta(minutes=film.duree)
         return cleaned_data
+
+
+class StatistiquesRemplissageForm(forms.Form):
+    film = forms.ModelChoiceField(
+        label="Film", queryset=Film.objects.order_by("titre", "pk"),
+        required=False, empty_label="Tous les films",
+    )
+    salle = forms.ModelChoiceField(
+        label="Salle", queryset=Salle.objects.order_by("nom", "pk"),
+        required=False, empty_label="Toutes les salles",
+    )
+    date_debut = forms.DateField(
+        label="Date de début", required=False, input_formats=("%Y-%m-%d",),
+        widget=forms.DateInput(format="%Y-%m-%d", attrs={"type": "date"}),
+    )
+    date_fin = forms.DateField(
+        label="Date de fin", required=False, input_formats=("%Y-%m-%d",),
+        widget=forms.DateInput(format="%Y-%m-%d", attrs={"type": "date"}),
+    )
+
+    def clean(self):
+        donnees = super().clean()
+        debut = donnees.get("date_debut")
+        fin = donnees.get("date_fin")
+        if debut and fin and fin < debut:
+            self.add_error(
+                "date_fin", "La date de fin doit être postérieure ou égale à la date de début.",
+            )
+        return donnees

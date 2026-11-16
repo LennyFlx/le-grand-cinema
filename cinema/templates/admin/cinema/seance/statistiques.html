@@ -1,0 +1,117 @@
+{% extends "admin/base_site.html" %}
+{% load static %}
+
+{% block extrastyle %}
+  {{ block.super }}
+  <link rel="stylesheet" href="{% static 'admin/css/forms.css' %}">
+  <link rel="stylesheet" href="{% static 'admin/css/changelists.css' %}">
+{% endblock %}
+
+{% block breadcrumbs %}
+  <div class="breadcrumbs">
+    <a href="{% url 'admin:index' %}">Accueil</a>
+    &rsaquo; <a href="{% url 'admin:app_list' app_label='cinema' %}">Cinéma</a>
+    &rsaquo; <a href="{% url 'admin:cinema_seance_changelist' %}">Séances</a>
+    &rsaquo; Taux de remplissage
+  </div>
+{% endblock %}
+
+{% block content %}
+  <div id="content-main">
+    <p>Les places comptabilisées appartiennent uniquement à des réservations confirmées.
+      Les dates portent sur le début des séances, bornes incluses, en heure locale.</p>
+    <form method="get">
+      <fieldset class="module aligned">
+        <h2>Filtrer les séances</h2>
+        {{ formulaire.non_field_errors }}
+        {% for champ in formulaire %}
+          <div class="form-row">
+            {{ champ.errors }}
+            <div class="flex-container">{{ champ.label_tag }} {{ champ }}</div>
+          </div>
+        {% endfor %}
+      </fieldset>
+      <div class="submit-row">
+        <input type="submit" value="Appliquer les filtres">
+        <a href="{% url 'admin:cinema_seance_statistiques' %}">Réinitialiser</a>
+      </div>
+    </form>
+
+    {% if synthese %}
+      <div class="module">
+        <h2>Synthèse de toutes les séances filtrées</h2>
+        <table>
+          <thead>
+            <tr>
+              <th scope="col">Nombre de séances</th>
+              <th scope="col">Places réservées</th>
+              <th scope="col">Capacité cumulée</th>
+              <th scope="col">Taux de remplissage global pondéré</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>{{ synthese.nombre_seances }}</td>
+              <td>{{ synthese.places_reservees }}</td>
+              <td>{{ synthese.capacite_totale }}</td>
+              <td>{{ synthese.taux_global|floatformat:2 }} %</td>
+            </tr>
+          </tbody>
+        </table>
+        <p>Le taux global correspond aux places réservées divisées par la capacité cumulée
+          des salles, comptée une fois par séance.</p>
+      </div>
+
+      {% if synthese.nombre_seances %}
+        <div class="module" id="changelist">
+          <div class="results">
+            <table id="result_list">
+              <caption>Remplissage par séance</caption>
+              <thead>
+                <tr>
+                  <th scope="col">Séance</th>
+                  <th scope="col">Film</th>
+                  <th scope="col">Salle</th>
+                  <th scope="col">Date et heure</th>
+                  <th scope="col">Statut</th>
+                  <th scope="col">Places réservées</th>
+                  <th scope="col">Capacité</th>
+                  <th scope="col">Taux de remplissage</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for seance in page_obj %}
+                  <tr>
+                    <td>N°{{ seance.pk }}</td>
+                    <td>{{ seance.film.titre }}</td>
+                    <td>{{ seance.salle.nom }}</td>
+                    <td>{{ seance.debut|date:"d/m/Y H:i" }}</td>
+                    <td>{{ seance.get_statut_display }}</td>
+                    <td>{{ seance.places_reservees }}</td>
+                    <td>{{ seance.capacite }}</td>
+                    <td>{{ seance.taux_remplissage|floatformat:2 }} %</td>
+                  </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        </div>
+        {% if page_obj.has_other_pages %}
+          <nav class="paginator" aria-label="Pagination des statistiques">
+            {% if page_obj.has_previous %}
+              <a href="?{% if filtres_query %}{{ filtres_query }}&amp;{% endif %}page={{ page_obj.previous_page_number }}">Page précédente</a>
+            {% endif %}
+            <span>Page {{ page_obj.number }} sur {{ page_obj.paginator.num_pages }}</span>
+            {% if page_obj.has_next %}
+              <a href="?{% if filtres_query %}{{ filtres_query }}&amp;{% endif %}page={{ page_obj.next_page_number }}">Page suivante</a>
+            {% endif %}
+          </nav>
+        {% endif %}
+      {% else %}
+        <p role="status">Aucune séance ne correspond aux filtres sélectionnés.</p>
+      {% endif %}
+    {% else %}
+      <p role="alert">Corrigez les filtres pour afficher les statistiques.</p>
+    {% endif %}
+  </div>
+{% endblock %}
