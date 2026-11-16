@@ -143,6 +143,8 @@ Après la validation du paiement en mode test, un e-mail de confirmation contena
 - [Stratégie de tests](docs/tests.md)
 - [Statistiques de remplissage des séances](docs/statistiques-remplissage.md)
 - [Analyse des périodes de forte affluence](docs/statistiques-affluence.md)
+- [Spécification OpenAPI - Stripe](docs/openapi.yaml)
+- Interface Swagger UI : `/docs/api/` sur l'application déployée.
 - [Tests de performance k6](docs/tests-performance.md)
 - [Modélisation des données](docs/modele-donnees.md)
 - [Workflow Git](docs/git-workflow.md)

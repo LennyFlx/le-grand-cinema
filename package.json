@@ -10,6 +10,7 @@
   "devDependencies": {
     "@tailwindcss/cli": "4.3.3",
     "chart.js": "4.5.1",
+    "swagger-ui-dist": "^5.35.0",
     "tailwindcss": "4.3.3"
   }
 }

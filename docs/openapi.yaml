@@ -15,8 +15,8 @@ info:
     La route de démarrage du paiement est destinée à un formulaire du site.
     Le webhook est destiné exclusivement aux notifications signées de Stripe.
 servers:
-  - url: http://127.0.0.1:8000
-    description: Serveur Django local (exemple)
+  - url: /
+    description: Serveur hébergeant Le Grand Cinéma
 tags:
   - name: Paiement
     description: Démarrage du paiement par le navigateur.
