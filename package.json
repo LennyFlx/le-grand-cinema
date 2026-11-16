@@ -3,10 +3,13 @@
   "private": true,
   "scripts": {
     "build:css": "tailwindcss -i ./assets/css/input.css -o ./cinema/static/cinema/css/site.css --minify",
-    "watch:css": "tailwindcss -i ./assets/css/input.css -o ./cinema/static/cinema/css/site.css --watch"
+    "watch:css": "tailwindcss -i ./assets/css/input.css -o ./cinema/static/cinema/css/site.css --watch",
+    "build:charts": "node scripts/copier_chartjs.cjs",
+    "test:charts": "node --test tests/javascript/affluence.test.cjs"
   },
   "devDependencies": {
     "@tailwindcss/cli": "4.3.3",
+    "chart.js": "4.5.1",
     "tailwindcss": "4.3.3"
   }
 }
