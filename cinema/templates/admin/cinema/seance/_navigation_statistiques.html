@@ -1,0 +1,8 @@
+<nav class="module" aria-label="Statistiques">
+  <h2>Statistiques</h2>
+  <p>
+    <a href="{% url 'admin:cinema_seance_statistiques' %}"{% if active == "remplissage" %} aria-current="page"{% endif %}>Taux de remplissage</a>
+    &nbsp;|&nbsp;
+    <a href="{% url 'admin:cinema_seance_affluence' %}"{% if active == "affluence" %} aria-current="page"{% endif %}>Affluence</a>
+  </p>
+</nav>

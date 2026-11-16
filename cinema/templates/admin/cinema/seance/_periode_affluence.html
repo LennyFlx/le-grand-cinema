@@ -1,0 +1,75 @@
+<section class="module">
+  <h2>{{ titre }} : du {{ periode.date_debut|date:"d/m/Y" }} au {{ periode.date_fin|date:"d/m/Y" }}</h2>
+  <div class="statistiques-indicateurs">
+    <p><strong>Total de places réservées</strong><br>{{ periode.total_places }}</p>
+    <p><strong>Jour le plus fréquenté</strong><br>
+      {% if periode.jour_plus_frequente %}
+        {{ periode.jour_plus_frequente.jour|date:"d/m/Y" }} : {{ periode.jour_plus_frequente.places_reservees }} place(s)
+      {% else %}Aucun{% endif %}
+    </p>
+    <p><strong>Séance la plus demandée</strong><br>
+      {% if periode.seance_plus_demandee %}
+        N°{{ periode.seance_plus_demandee.pk }} — {{ periode.seance_plus_demandee.film.titre }}<br>
+        {{ periode.seance_plus_demandee.salle.nom }} — {{ periode.seance_plus_demandee.debut|date:"d/m/Y H:i" }}<br>
+        {{ periode.seance_plus_demandee.places_reservees }} place(s)
+      {% else %}Aucune{% endif %}
+    </p>
+  </div>
+  {% if periode.total_places %}
+    <h3>Évolution quotidienne des places réservées</h3>
+    <p id="description-{{ identifiant }}">Un point par date de séance, y compris les jours sans réservation.
+      Le tableau quotidien ci-dessous présente les mêmes données.</p>
+    <div class="statistiques-graphique">
+      <canvas data-affluence="{{ identifiant }}" role="img"
+              aria-label="Places réservées par jour — {{ titre }}"
+              aria-describedby="description-{{ identifiant }}">Consultez le tableau quotidien ci-dessous.</canvas>
+    </div>
+    <p data-erreur-graphique="{{ identifiant }}" hidden role="status">
+      Le graphique est indisponible. Les données restent consultables dans le tableau quotidien.
+    </p>
+    <noscript><p>Activez JavaScript pour afficher le graphique, ou consultez le tableau quotidien.</p></noscript>
+
+    <div class="statistiques-classements">
+      <div class="statistiques-tableau">
+        <table>
+          <caption>Les 10 jours les plus fréquentés - {{ titre }}</caption>
+          <thead><tr><th scope="col">Rang</th><th scope="col">Jour</th><th scope="col">Places réservées</th></tr></thead>
+          <tbody>
+            {% for jour in periode.classement_jours %}
+              <tr><td>{{ forloop.counter }}</td><td>{{ jour.jour|date:"d/m/Y" }}</td><td>{{ jour.places_reservees }}</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      <div class="statistiques-tableau">
+        <table>
+          <caption>Les 10 séances les plus demandées - {{ titre }}</caption>
+          <thead><tr><th scope="col">Rang</th><th scope="col">Séance</th><th scope="col">Film</th><th scope="col">Salle</th><th scope="col">Début</th><th scope="col">Places réservées</th></tr></thead>
+          <tbody>
+            {% for seance in periode.classement_seances %}
+              <tr><td>{{ forloop.counter }}</td><td>N°{{ seance.pk }}</td><td>{{ seance.film.titre }}</td><td>{{ seance.salle.nom }}</td><td>{{ seance.debut|date:"d/m/Y H:i" }}</td><td>{{ seance.places_reservees }}</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+    <p>Les classements excluent les valeurs nulles. En cas d'égalité, la date la plus ancienne
+      est présentée en premier, puis le numéro de séance.</p>
+    <details>
+      <summary>Consulter le tableau quotidien - {{ titre }}</summary>
+      <div class="statistiques-tableau">
+        <table>
+          <caption>Places réservées par jour - {{ titre }}</caption>
+          <thead><tr><th scope="col">Date de séance</th><th scope="col">Places réservées</th></tr></thead>
+          <tbody>
+            {% for jour in periode.jours %}
+              <tr><td>{{ jour.jour|date:"d/m/Y" }}</td><td>{{ jour.places_reservees }}</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </details>
+  {% else %}
+    <p role="status">Aucune donnée disponible : aucune place réservée confirmée pour cette période et ces filtres.</p>
+  {% endif %}
+</section>

@@ -1,16 +1,22 @@
+from datetime import timedelta
+
 from django.contrib import admin, messages
 from django.contrib.admin.helpers import ACTION_CHECKBOX_NAME
-from django.core.exceptions import ValidationError
+from django.core.exceptions import PermissionDenied, ValidationError
+from django.core.paginator import Paginator
 from django.db import transaction
 from django.db.models import Count
 from django.template.response import TemplateResponse
+from django.urls import path
 from django.utils import timezone
+from django.views.decorators.http import require_safe
 
 from reservations.services import compter_places_disponibles
 
-from .forms import SeanceAdminForm
+from .forms import SeanceAdminForm, StatistiquesAffluenceForm, StatistiquesRemplissageForm
 from .models import Film, Genre, Participation, Personne, Seance
 from .services import annuler_seance, enregistrer_seance
+from .statistiques import obtenir_statistiques_affluence, obtenir_statistiques_remplissage
 
 
 @admin.register(Personne)
@@ -72,6 +78,7 @@ class FilmAdmin(admin.ModelAdmin):
 @admin.register(Seance)
 class SeanceAdmin(admin.ModelAdmin):
     form = SeanceAdminForm
+    change_list_template = "admin/cinema/seance/change_list.html"
     list_display = ("film", "salle", "debut", "fin", "prix", "statut", "places_disponibles")
     list_filter = ("salle", "statut", "debut")
     list_select_related = ("film", "salle")
@@ -79,6 +86,88 @@ class SeanceAdmin(admin.ModelAdmin):
     fields = ("film", "salle", "debut", "prix", "fin", "statut", "places_disponibles")
     readonly_fields = ("fin", "statut", "places_disponibles")
     actions = ("annuler_les_seances",)
+
+    def get_urls(self):
+        return [
+            path(
+                "statistiques/affluence/",
+                self.admin_site.admin_view(require_safe(self.statistiques_affluence)),
+                name="cinema_seance_affluence",
+            ),
+            path(
+                "statistiques/",
+                self.admin_site.admin_view(require_safe(self.statistiques_remplissage)),
+                name="cinema_seance_statistiques",
+            ),
+        ] + super().get_urls()
+
+    def has_statistiques_permission(self, request):
+        return (
+            request.user.has_perm("cinema.view_seance")
+            and request.user.has_perm("reservations.view_reservation")
+        )
+
+    def changelist_view(self, request, extra_context=None):
+        return super().changelist_view(request, {
+            **(extra_context or {}),
+            "peut_consulter_statistiques": self.has_statistiques_permission(request),
+        })
+
+    def statistiques_remplissage(self, request):
+        if not self.has_statistiques_permission(request):
+            raise PermissionDenied
+        formulaire = StatistiquesRemplissageForm(request.GET)
+        contexte = {
+            **self.admin_site.each_context(request),
+            "title": "Taux de remplissage des séances",
+            "opts": self.model._meta,
+            "formulaire": formulaire,
+        }
+        statut = 200
+        if formulaire.is_valid():
+            statistiques = obtenir_statistiques_remplissage(**formulaire.cleaned_data)
+            pagination = Paginator(statistiques["seances"], 50)
+            filtres = request.GET.copy()
+            filtres.pop("page", None)
+            contexte.update(
+                synthese=statistiques["synthese"],
+                page_obj=pagination.get_page(request.GET.get("page")),
+                filtres_query=filtres.urlencode(),
+            )
+        else:
+            statut = 400
+        return TemplateResponse(
+            request, "admin/cinema/seance/statistiques.html", contexte, status=statut,
+        )
+
+    def statistiques_affluence(self, request):
+        if not self.has_statistiques_permission(request):
+            raise PermissionDenied
+        filtres = request.GET.copy()
+        if "date_debut" not in filtres and "date_fin" not in filtres:
+            aujourd_hui = timezone.localdate()
+            filtres["date_debut"] = (aujourd_hui - timedelta(days=29)).isoformat()
+            filtres["date_fin"] = aujourd_hui.isoformat()
+        formulaire = StatistiquesAffluenceForm(filtres)
+        contexte = {
+            **self.admin_site.each_context(request),
+            "title": "Périodes de forte affluence",
+            "opts": self.model._meta,
+            "formulaire": formulaire,
+        }
+        statut = 200
+        if formulaire.is_valid():
+            statistiques = obtenir_statistiques_affluence(**formulaire.cleaned_data)
+            contexte.update(statistiques)
+            contexte["donnees_graphiques"] = {
+                "principale": statistiques["principale"]["jours"],
+                "reference": statistiques["reference"]["jours"] if statistiques["reference"] else [],
+            }
+        else:
+            statut = 400
+        return TemplateResponse(
+            request, "admin/cinema/seance/affluence.html", contexte, status=statut,
+        )
 
     @admin.display(description="Places disponibles")
     def places_disponibles(self, obj):

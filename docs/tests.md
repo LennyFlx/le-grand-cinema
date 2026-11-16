@@ -16,6 +16,7 @@ La stratégie repose sur trois approches complémentaires : les tests automatis�
 | Coverage | Mesure de la couverture des lignes et des branches Python |
 | Ruff | Analyse statique du code Python |
 | k6 | Simulation de consultations HTTP avec plusieurs utilisateurs virtuels |
+| `node:test` | Vérification de la préparation des graphiques d'affluence et du repli sans Chart.js |
 
 Les dépendances de test et de qualité sont déclarées dans [`requirements-dev.txt`](../requirements-dev.txt), à l'exception de k6, installé séparément.
 
@@ -31,6 +32,11 @@ Les tests vérifient notamment :
 - Les contraintes de programmation : horaires, chevauchements, salles et films inactifs.
 - La création, la modification et l'annulation des séances dans l'administration.
 - La génération du plan de salle et le chargement des fixtures.
+- Les statistiques de remplissage : sièges confirmés distincts, capacités et taux pondéré,
+  filtres par dates locales, permissions, pagination et absence de données.
+- L'affluence : totaux quotidiens par date de séance, jours sans entrée, classements,
+  comparaison de périodes et variations, permissions, nombre constant de requêtes
+  et absence de modification des données métier.
 
 ### 3.2 Réservations et billets — `tests/reservations/`
 
@@ -84,6 +90,29 @@ python manage.py test tests.paiements.test_webhook
 ```
 
 Ces commandes ne nécessitent pas le lancement de `runserver`. Elles doivent être exécutées sur un **environnement de développement ou de test**, jamais en utilisant les identifiants de la base de production.
+
+### 4.3 Graphiques d'affluence
+
+Les tests dédiés de l'US-16 réutilisent les données de test de l'US-15 et se lancent avec :
+
+```powershell
+python manage.py test tests.cinema.test_affluence tests.cinema.test_statistiques --noinput
+```
+
+Les tests JavaScript utilisent le module intégré `node:test` (Node.js 18 ou ultérieur),
+sans framework de test supplémentaire :
+
+```powershell
+npm ci
+npm run build:charts
+npm run test:charts
+```
+
+Ils vérifient la transmission des dates et compteurs aux courbes, les jours à zéro,
+l'indépendance des séries comparées, le repli si Chart.js est indisponible et les
+composants de la version locale. Ils ne remplacent pas une recette visuelle dans
+un navigateur. Les règles de calcul et les scénarios manuels sont décrits dans
+[la documentation de l'affluence](statistiques-affluence.md).
 
 ## 5. Couverture du code
 

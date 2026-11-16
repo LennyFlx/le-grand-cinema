@@ -11,6 +11,8 @@ Application web de réservation de places de cinéma, développée avec **Django
 - Génération de billets numériques (**PDF et QR code**) et envoi par e-mail.
 - Consultation des billets à partir d'un lien personnel signé et contrôle par le personnel autorisé.
 - Administration des films, des séances et des réservations via Django Admin.
+- Statistiques de remplissage des séances, avec filtres et synthèse pondérée dans Django Admin.
+- Analyse de l'affluence quotidienne : graphiques, comparaison de périodes et classements dans Django Admin.
 
 ## Technologies
 
@@ -18,7 +20,7 @@ Application web de réservation de places de cinéma, développée avec **Django
 |---|---|
 | Backend | Python, Django 5.2 |
 | Base de données | PostgreSQL, ORM Django |
-| Interface | Templates Django, Tailwind CSS 4, JavaScript |
+| Interface | Templates Django, Tailwind CSS 4, JavaScript, Chart.js |
 | Paiement | Stripe Checkout |
 | Qualité et tests | Tests Django, Coverage, Ruff, k6 |
 
@@ -68,6 +70,15 @@ Le CSS compilé est présent dans le dépôt. Pour le régénérer après modifi
 ```powershell
 npm ci
 npm run build:css
+```
+
+Les graphiques de l'administration utilisent une copie locale minifiée de Chart.js 4.5.1,
+avec ses licences, déjà présente dans les fichiers statiques. Pour la régénérer après
+installation des dépendances avec `npm ci` :
+
+```powershell
+npm run build:charts
+npm run test:charts
 ```
 
 **Important :** conserver les secrets dans `.env`, jamais dans Git. Le serveur `runserver` est réservé au développement local.
@@ -130,6 +141,10 @@ Après la validation du paiement en mode test, un e-mail de confirmation contena
 - [Architecture technique](docs/architecture.md)
 - [Guide de déploiement](docs/deploiement.md)
 - [Stratégie de tests](docs/tests.md)
+- [Statistiques de remplissage des séances](docs/statistiques-remplissage.md)
+- [Analyse des périodes de forte affluence](docs/statistiques-affluence.md)
+- [Spécification OpenAPI - Stripe](docs/openapi.yaml)
+- Interface Swagger UI : `/docs/api/` sur l'application déployée.
 - [Tests de performance k6](docs/tests-performance.md)
 - [Modélisation des données](docs/modele-donnees.md)
 - [Workflow Git](docs/git-workflow.md)
