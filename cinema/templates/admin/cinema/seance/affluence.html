@@ -1,0 +1,87 @@
+{% extends "admin/base_site.html" %}
+{% load static %}
+
+{% block extrastyle %}
+  {{ block.super }}
+  <link rel="stylesheet" href="{% static 'admin/css/forms.css' %}">
+  <link rel="stylesheet" href="{% static 'cinema/css/admin_statistiques.css' %}">
+{% endblock %}
+
+{% block extrahead %}
+  {{ block.super }}
+  <script src="{% static 'cinema/vendor/chartjs/chart.umd.js' %}" defer></script>
+  <script src="{% static 'cinema/js/affluence.js' %}" defer></script>
+{% endblock %}
+
+{% block breadcrumbs %}
+  <div class="breadcrumbs">
+    <a href="{% url 'admin:index' %}">Accueil</a>
+    &rsaquo; <a href="{% url 'admin:app_list' app_label='cinema' %}">Cinéma</a>
+    &rsaquo; <a href="{% url 'admin:cinema_seance_changelist' %}">Séances</a>
+    &rsaquo; Statistiques &rsaquo; Affluence
+  </div>
+{% endblock %}
+
+{% block content %}
+  <div id="content-main">
+    {% include "admin/cinema/seance/_navigation_statistiques.html" with active="affluence" %}
+    <p>Les places comptabilisées appartiennent uniquement à des réservations confirmées.
+      Les dates portent sur le début des séances, bornes incluses, en heure locale.
+      Ces données décrivent les réservations actuelles et ne constituent pas une prévision.</p>
+    <form method="get">
+      <fieldset class="module aligned">
+        <h2>Période d'analyse et comparaison</h2>
+        <p>Par défaut : les 30 derniers jours. Maximum : 366 jours par période.
+          Pour comparer, renseignez les deux dates de référence. Les filtres film et salle
+          s'appliquent aux deux périodes.</p>
+        {{ formulaire.non_field_errors }}
+        {% for champ in formulaire %}
+          <div class="form-row">
+            {{ champ.errors }}
+            <div class="flex-container">{{ champ.label_tag }} {{ champ }}</div>
+          </div>
+        {% endfor %}
+      </fieldset>
+      <div class="submit-row">
+        <input type="submit" value="Analyser l'affluence">
+        <a href="{% url 'admin:cinema_seance_affluence' %}">Réinitialiser</a>
+      </div>
+    </form>
+
+    {% if principale %}
+      {% if reference %}
+        <section class="module statistiques-tableau">
+          <h2>Comparaison des périodes</h2>
+          <table>
+            <thead>
+              <tr><th scope="col">Indicateur</th><th scope="col">Période analysée</th><th scope="col">Période de référence</th></tr>
+            </thead>
+            <tbody>
+              <tr><th scope="row">Dates incluses</th><td>{{ principale.date_debut|date:"d/m/Y" }} au {{ principale.date_fin|date:"d/m/Y" }}</td><td>{{ reference.date_debut|date:"d/m/Y" }} au {{ reference.date_fin|date:"d/m/Y" }}</td></tr>
+              <tr><th scope="row">Nombre de jours</th><td>{{ principale.nombre_jours }}</td><td>{{ reference.nombre_jours }}</td></tr>
+              <tr><th scope="row">Places réservées</th><td>{{ principale.total_places }}</td><td>{{ reference.total_places }}</td></tr>
+              <tr><th scope="row">Moyenne de places par jour</th><td>{{ principale.moyenne_jour|floatformat:2 }}</td><td>{{ reference.moyenne_jour|floatformat:2 }}</td></tr>
+            </tbody>
+          </table>
+          <p>Écart (période analysée − référence) : <strong>{{ variation.places }} place(s)</strong>.
+            Variation :
+            {% if variation.pourcentage != None %}
+              <strong>{{ variation.pourcentage|floatformat:2 }} %</strong>.
+            {% else %}
+              non calculable, car la période de référence ne comporte aucune place réservée.
+            {% endif %}
+          </p>
+          <p>Pour des périodes de durées différentes, comparez aussi les moyennes quotidiennes.</p>
+        </section>
+      {% endif %}
+
+      {% include "admin/cinema/seance/_periode_affluence.html" with periode=principale identifiant="principale" titre="Période analysée" %}
+      {% if reference %}
+        {% include "admin/cinema/seance/_periode_affluence.html" with periode=reference identifiant="reference" titre="Période de référence" %}
+      {% endif %}
+      {{ donnees_graphiques|json_script:"affluence-donnees" }}
+    {% else %}
+      <p role="alert">Corrigez les filtres pour afficher les statistiques d'affluence.</p>
+    {% endif %}
+  </div>
+{% endblock %}
