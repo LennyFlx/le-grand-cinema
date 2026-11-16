@@ -18,12 +18,24 @@ from django.conf import settings
 from django.conf.urls.static import static
 from django.contrib import admin
 from django.urls import include, path
+from .views import specification_openapi, documentation_swagger
 
 urlpatterns = [
     path('', include('cinema.urls')),
     path('reservations/', include('reservations.urls')),
     path('paiements/', include('paiements.urls')),
     path('admin/', admin.site.urls),
+
+    path(
+        "docs/api/openapi.yaml",
+        specification_openapi,
+        name="openapi_schema",
+    ),
+    path(
+        "docs/api/",
+        documentation_swagger,
+        name="swagger_ui",
+    ),
 ]
 
 if settings.DEBUG:

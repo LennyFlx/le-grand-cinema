@@ -1,0 +1,30 @@
+
+{% load static %}
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>Documentation API — Le Grand Cinéma</title>
+
+    <link rel="stylesheet"
+          href="{% static 'cinema/swagger-ui/swagger-ui.css' %}">
+</head>
+<body>
+    <div id="swagger-ui"></div>
+
+    <script src="{% static 'cinema/swagger-ui/swagger-ui-bundle.js' %}"></script>
+
+    <script>
+        window.onload = function () {
+            SwaggerUIBundle({
+                url: "{% url 'openapi_schema' %}",
+                dom_id: "#swagger-ui",
+                deepLinking: true,
+                supportedSubmitMethods: [],
+                validatorUrl: null
+            });
+        };
+    </script>
+</body>
+</html>
